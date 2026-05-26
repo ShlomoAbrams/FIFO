@@ -1,0 +1,14 @@
+# ModelSim / QuestaSim temporary files
+work/
+rtl_work/
+*.wlf
+*.mpf
+*.syn
+*.ano
+transcript
+
+# Python automation garbage (if you use scripts)
+__pycache__/
+*.pyc
+*.ucdb
+modelsim.ini
