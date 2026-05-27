@@ -1,0 +1,358 @@
+Coverage Report by instance with details
+
+=================================================================================
+=== Instance: /fifo_top/dut/sva_inst
+=== Design Unit: work.fifo_sva
+=================================================================================
+
+Covergroup Coverage:
+    Covergroups                      2        na        na   100.00%
+        Coverpoints/Crosses         12        na        na        na
+            Covergroup Bins         50        50         0   100.00%
+----------------------------------------------------------------------------------------------------------
+Covergroup                                             Metric       Goal       Bins    Status               
+                                                                                                         
+----------------------------------------------------------------------------------------------------------
+ TYPE /fifo_top/dut/sva_inst/fifo_w_cg                100.00%        100          -    Covered              
+    covered/total bins:                                    25         25          -                      
+    missing/total bins:                                     0         25          -                      
+    % Hit:                                            100.00%        100          -                      
+    Coverpoint wfull                                  100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+    Coverpoint w_occupancy                            100.00%        100          -    Covered              
+        covered/total bins:                                 5          5          -                      
+        missing/total bins:                                 0          5          -                      
+        % Hit:                                        100.00%        100          -                      
+    Coverpoint winc                                   100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+    Coverpoint wrst_n                                 100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+    Cross #cross__0#                                  100.00%        100          -    Covered              
+        covered/total bins:                                 4          4          -                      
+        missing/total bins:                                 0          4          -                      
+        % Hit:                                        100.00%        100          -                      
+    Cross #cross__1#                                  100.00%        100          -    Covered              
+        covered/total bins:                                10         10          -                      
+        missing/total bins:                                 0         10          -                      
+        % Hit:                                        100.00%        100          -                      
+ Covergroup instance \/fifo_top/dut/sva_inst/w_cg     100.00%        100          -    Covered              
+    covered/total bins:                                    25         25          -                      
+    missing/total bins:                                     0         25          -                      
+    % Hit:                                            100.00%        100          -                      
+    Coverpoint wfull                                  100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+        bin full                                           30          1          -    Covered              
+        bin not_full                                      421          1          -    Covered              
+    Coverpoint w_occupancy                            100.00%        100          -    Covered              
+        covered/total bins:                                 5          5          -                      
+        missing/total bins:                                 0          5          -                      
+        % Hit:                                        100.00%        100          -                      
+        bin empty                                          45          1          -    Covered              
+        bin almost_empty                                   30          1          -    Covered              
+        bin mid_range                                     338          1          -    Covered              
+        bin almost_full                                    10          1          -    Covered              
+        bin full                                           28          1          -    Covered              
+    Coverpoint winc                                   100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+        bin auto[0]                                       332          1          -    Covered              
+        bin auto[1]                                       118          1          -    Covered              
+    Coverpoint wrst_n                                 100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+        bin auto[0]                                         5          1          -    Covered              
+        bin auto[1]                                       446          1          -    Covered              
+    Cross #cross__0#                                  100.00%        100          -    Covered              
+        covered/total bins:                                 4          4          -                      
+        missing/total bins:                                 0          4          -                      
+        % Hit:                                        100.00%        100          -                      
+        Auto, Default and User Defined Bins:
+            bin <auto[1],not_full>                        108          1          -    Covered              
+            bin <auto[0],not_full>                        312          1          -    Covered              
+            bin <auto[1],full>                             10          1          -    Covered              
+            bin <auto[0],full>                             20          1          -    Covered              
+    Cross #cross__1#                                  100.00%        100          -    Covered              
+        covered/total bins:                                10         10          -                      
+        missing/total bins:                                 0         10          -                      
+        % Hit:                                        100.00%        100          -                      
+        Auto, Default and User Defined Bins:
+            bin <auto[1],full>                             10          1          -    Covered              
+            bin <auto[0],full>                             18          1          -    Covered              
+            bin <auto[1],almost_full>                       4          1          -    Covered              
+            bin <auto[0],almost_full>                       6          1          -    Covered              
+            bin <auto[1],mid_range>                        88          1          -    Covered              
+            bin <auto[0],mid_range>                       250          1          -    Covered              
+            bin <auto[1],almost_empty>                     10          1          -    Covered              
+            bin <auto[0],almost_empty>                     20          1          -    Covered              
+            bin <auto[1],empty>                             6          1          -    Covered              
+            bin <auto[0],empty>                            38          1          -    Covered              
+ TYPE /fifo_top/dut/sva_inst/fifo_r_cg                100.00%        100          -    Covered              
+    covered/total bins:                                    25         25          -                      
+    missing/total bins:                                     0         25          -                      
+    % Hit:                                            100.00%        100          -                      
+    Coverpoint rempty                                 100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+    Coverpoint r_occupancy                            100.00%        100          -    Covered              
+        covered/total bins:                                 5          5          -                      
+        missing/total bins:                                 0          5          -                      
+        % Hit:                                        100.00%        100          -                      
+    Coverpoint rinc                                   100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+    Coverpoint rrst_n                                 100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+    Cross #cross__0#                                  100.00%        100          -    Covered              
+        covered/total bins:                                 4          4          -                      
+        missing/total bins:                                 0          4          -                      
+        % Hit:                                        100.00%        100          -                      
+    Cross #cross__1#                                  100.00%        100          -    Covered              
+        covered/total bins:                                10         10          -                      
+        missing/total bins:                                 0         10          -                      
+        % Hit:                                        100.00%        100          -                      
+ Covergroup instance \/fifo_top/dut/sva_inst/r_cg     100.00%        100          -    Covered              
+    covered/total bins:                                    25         25          -                      
+    missing/total bins:                                     0         25          -                      
+    % Hit:                                            100.00%        100          -                      
+    Coverpoint rempty                                 100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+        bin empty                                          44          1          -    Covered              
+        bin not_empty                                     278          1          -    Covered              
+    Coverpoint r_occupancy                            100.00%        100          -    Covered              
+        covered/total bins:                                 5          5          -                      
+        missing/total bins:                                 0          5          -                      
+        % Hit:                                        100.00%        100          -                      
+        bin empty                                          40          1          -    Covered              
+        bin almost_empty                                   30          1          -    Covered              
+        bin mid_range                                     230          1          -    Covered              
+        bin almost_full                                     6          1          -    Covered              
+        bin full                                           16          1          -    Covered              
+    Coverpoint rinc                                   100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+        bin auto[0]                                       201          1          -    Covered              
+        bin auto[1]                                       120          1          -    Covered              
+    Coverpoint rrst_n                                 100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+        bin auto[0]                                         4          1          -    Covered              
+        bin auto[1]                                       318          1          -    Covered              
+    Cross #cross__0#                                  100.00%        100          -    Covered              
+        covered/total bins:                                 4          4          -                      
+        missing/total bins:                                 0          4          -                      
+        % Hit:                                        100.00%        100          -                      
+        Auto, Default and User Defined Bins:
+            bin <auto[1],not_empty>                        96          1          -    Covered              
+            bin <auto[0],not_empty>                       182          1          -    Covered              
+            bin <auto[1],empty>                            24          1          -    Covered              
+            bin <auto[0],empty>                            19          1          -    Covered              
+    Cross #cross__1#                                  100.00%        100          -    Covered              
+        covered/total bins:                                10         10          -                      
+        missing/total bins:                                 0         10          -                      
+        % Hit:                                        100.00%        100          -                      
+        Auto, Default and User Defined Bins:
+            bin <auto[1],full>                              2          1          -    Covered              
+            bin <auto[0],full>                             14          1          -    Covered              
+            bin <auto[1],almost_full>                       4          1          -    Covered              
+            bin <auto[0],almost_full>                       2          1          -    Covered              
+            bin <auto[1],mid_range>                        82          1          -    Covered              
+            bin <auto[0],mid_range>                       148          1          -    Covered              
+            bin <auto[1],almost_empty>                     10          1          -    Covered              
+            bin <auto[0],almost_empty>                     20          1          -    Covered              
+            bin <auto[1],empty>                            22          1          -    Covered              
+            bin <auto[0],empty>                            17          1          -    Covered              
+
+COVERGROUP COVERAGE:
+----------------------------------------------------------------------------------------------------------
+Covergroup                                             Metric       Goal       Bins    Status               
+                                                                                                         
+----------------------------------------------------------------------------------------------------------
+ TYPE /fifo_top/dut/sva_inst/fifo_w_cg                100.00%        100          -    Covered              
+    covered/total bins:                                    25         25          -                      
+    missing/total bins:                                     0         25          -                      
+    % Hit:                                            100.00%        100          -                      
+    Coverpoint wfull                                  100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+    Coverpoint w_occupancy                            100.00%        100          -    Covered              
+        covered/total bins:                                 5          5          -                      
+        missing/total bins:                                 0          5          -                      
+        % Hit:                                        100.00%        100          -                      
+    Coverpoint winc                                   100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+    Coverpoint wrst_n                                 100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+    Cross #cross__0#                                  100.00%        100          -    Covered              
+        covered/total bins:                                 4          4          -                      
+        missing/total bins:                                 0          4          -                      
+        % Hit:                                        100.00%        100          -                      
+    Cross #cross__1#                                  100.00%        100          -    Covered              
+        covered/total bins:                                10         10          -                      
+        missing/total bins:                                 0         10          -                      
+        % Hit:                                        100.00%        100          -                      
+ Covergroup instance \/fifo_top/dut/sva_inst/w_cg     100.00%        100          -    Covered              
+    covered/total bins:                                    25         25          -                      
+    missing/total bins:                                     0         25          -                      
+    % Hit:                                            100.00%        100          -                      
+    Coverpoint wfull                                  100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+        bin full                                           30          1          -    Covered              
+        bin not_full                                      421          1          -    Covered              
+    Coverpoint w_occupancy                            100.00%        100          -    Covered              
+        covered/total bins:                                 5          5          -                      
+        missing/total bins:                                 0          5          -                      
+        % Hit:                                        100.00%        100          -                      
+        bin empty                                          45          1          -    Covered              
+        bin almost_empty                                   30          1          -    Covered              
+        bin mid_range                                     338          1          -    Covered              
+        bin almost_full                                    10          1          -    Covered              
+        bin full                                           28          1          -    Covered              
+    Coverpoint winc                                   100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+        bin auto[0]                                       332          1          -    Covered              
+        bin auto[1]                                       118          1          -    Covered              
+    Coverpoint wrst_n                                 100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+        bin auto[0]                                         5          1          -    Covered              
+        bin auto[1]                                       446          1          -    Covered              
+    Cross #cross__0#                                  100.00%        100          -    Covered              
+        covered/total bins:                                 4          4          -                      
+        missing/total bins:                                 0          4          -                      
+        % Hit:                                        100.00%        100          -                      
+        Auto, Default and User Defined Bins:
+            bin <auto[1],not_full>                        108          1          -    Covered              
+            bin <auto[0],not_full>                        312          1          -    Covered              
+            bin <auto[1],full>                             10          1          -    Covered              
+            bin <auto[0],full>                             20          1          -    Covered              
+    Cross #cross__1#                                  100.00%        100          -    Covered              
+        covered/total bins:                                10         10          -                      
+        missing/total bins:                                 0         10          -                      
+        % Hit:                                        100.00%        100          -                      
+        Auto, Default and User Defined Bins:
+            bin <auto[1],full>                             10          1          -    Covered              
+            bin <auto[0],full>                             18          1          -    Covered              
+            bin <auto[1],almost_full>                       4          1          -    Covered              
+            bin <auto[0],almost_full>                       6          1          -    Covered              
+            bin <auto[1],mid_range>                        88          1          -    Covered              
+            bin <auto[0],mid_range>                       250          1          -    Covered              
+            bin <auto[1],almost_empty>                     10          1          -    Covered              
+            bin <auto[0],almost_empty>                     20          1          -    Covered              
+            bin <auto[1],empty>                             6          1          -    Covered              
+            bin <auto[0],empty>                            38          1          -    Covered              
+ TYPE /fifo_top/dut/sva_inst/fifo_r_cg                100.00%        100          -    Covered              
+    covered/total bins:                                    25         25          -                      
+    missing/total bins:                                     0         25          -                      
+    % Hit:                                            100.00%        100          -                      
+    Coverpoint rempty                                 100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+    Coverpoint r_occupancy                            100.00%        100          -    Covered              
+        covered/total bins:                                 5          5          -                      
+        missing/total bins:                                 0          5          -                      
+        % Hit:                                        100.00%        100          -                      
+    Coverpoint rinc                                   100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+    Coverpoint rrst_n                                 100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+    Cross #cross__0#                                  100.00%        100          -    Covered              
+        covered/total bins:                                 4          4          -                      
+        missing/total bins:                                 0          4          -                      
+        % Hit:                                        100.00%        100          -                      
+    Cross #cross__1#                                  100.00%        100          -    Covered              
+        covered/total bins:                                10         10          -                      
+        missing/total bins:                                 0         10          -                      
+        % Hit:                                        100.00%        100          -                      
+ Covergroup instance \/fifo_top/dut/sva_inst/r_cg     100.00%        100          -    Covered              
+    covered/total bins:                                    25         25          -                      
+    missing/total bins:                                     0         25          -                      
+    % Hit:                                            100.00%        100          -                      
+    Coverpoint rempty                                 100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+        bin empty                                          44          1          -    Covered              
+        bin not_empty                                     278          1          -    Covered              
+    Coverpoint r_occupancy                            100.00%        100          -    Covered              
+        covered/total bins:                                 5          5          -                      
+        missing/total bins:                                 0          5          -                      
+        % Hit:                                        100.00%        100          -                      
+        bin empty                                          40          1          -    Covered              
+        bin almost_empty                                   30          1          -    Covered              
+        bin mid_range                                     230          1          -    Covered              
+        bin almost_full                                     6          1          -    Covered              
+        bin full                                           16          1          -    Covered              
+    Coverpoint rinc                                   100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+        bin auto[0]                                       201          1          -    Covered              
+        bin auto[1]                                       120          1          -    Covered              
+    Coverpoint rrst_n                                 100.00%        100          -    Covered              
+        covered/total bins:                                 2          2          -                      
+        missing/total bins:                                 0          2          -                      
+        % Hit:                                        100.00%        100          -                      
+        bin auto[0]                                         4          1          -    Covered              
+        bin auto[1]                                       318          1          -    Covered              
+    Cross #cross__0#                                  100.00%        100          -    Covered              
+        covered/total bins:                                 4          4          -                      
+        missing/total bins:                                 0          4          -                      
+        % Hit:                                        100.00%        100          -                      
+        Auto, Default and User Defined Bins:
+            bin <auto[1],not_empty>                        96          1          -    Covered              
+            bin <auto[0],not_empty>                       182          1          -    Covered              
+            bin <auto[1],empty>                            24          1          -    Covered              
+            bin <auto[0],empty>                            19          1          -    Covered              
+    Cross #cross__1#                                  100.00%        100          -    Covered              
+        covered/total bins:                                10         10          -                      
+        missing/total bins:                                 0         10          -                      
+        % Hit:                                        100.00%        100          -                      
+        Auto, Default and User Defined Bins:
+            bin <auto[1],full>                              2          1          -    Covered              
+            bin <auto[0],full>                             14          1          -    Covered              
+            bin <auto[1],almost_full>                       4          1          -    Covered              
+            bin <auto[0],almost_full>                       2          1          -    Covered              
+            bin <auto[1],mid_range>                        82          1          -    Covered              
+            bin <auto[0],mid_range>                       148          1          -    Covered              
+            bin <auto[1],almost_empty>                     10          1          -    Covered              
+            bin <auto[0],almost_empty>                     20          1          -    Covered              
+            bin <auto[1],empty>                            22          1          -    Covered              
+            bin <auto[0],empty>                            17          1          -    Covered              
+
+TOTAL COVERGROUP COVERAGE: 100.00%  COVERGROUP TYPES: 2
+
+Total Coverage By Instance (filtered view): 100.00%
+

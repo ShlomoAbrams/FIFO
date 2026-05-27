@@ -1,34 +1,262 @@
 # Asynchronous FIFO Design & UVM Verification Environment
 
-## Overview
-This repository contains a high-performance **Asynchronous FIFO (First-In, First-Out)** memory buffer design implemented in synthesizable VHDL, alongside a complete, rigorous verification suite using **SystemVerilog and the Universal Verification Methodology (UVM)**. 
+> High-performance asynchronous FIFO implemented in synthesizable VHDL and verified using a complete SystemVerilog UVM environment with constrained-random testing, assertions, scoreboarding, and functional coverage.
 
-The design addresses critical hardware challenges including safe multi-bit data transfer across independent, unsynchronized clock domains (clock domain crossing), metastability mitigation, and robust status flag generation.
+---
 
-## System Architecture
+# Overview
 
-The project structure separates the synthesizable hardware implementation (RTL) from the advanced object-oriented verification components (UVM) and simulation run configurations:
+This project implements a parameterized asynchronous FIFO (First-In, First-Out) buffer designed for safe data transfer between independent clock domains.
+
+The design addresses critical clock-domain crossing (CDC) challenges including:
+- Metastability mitigation
+- Multi-bit synchronization
+- Gray-code pointer transfer
+- Reliable full/empty flag generation
+- Independent asynchronous read/write operation
+
+The verification environment was developed using the Universal Verification Methodology (UVM) and includes:
+- Constrained-random stimulus generation
+- Assertion-based verification (SVA)
+- Functional coverage
+- Self-checking scoreboard architecture
+- Randomized asynchronous clock behavior
+
+---
+
+# Why Asynchronous FIFOs Matter
+
+Asynchronous FIFOs are widely used in modern digital systems whenever data must safely cross between unrelated clock domains.
+
+Unlike synchronous FIFOs, asynchronous FIFOs must handle:
+- Unsynchronized clocks
+- Metastability risks
+- Safe pointer synchronization
+- Correct status flag generation despite CDC latency
+
+To minimize synchronization errors, Gray-code pointers are used because only a single bit changes between adjacent values.
+
+Gray-code conversion used in the design:
+
+f_{gray}=b\oplus(b>>1)
+
+The synchronized Gray pointers are transferred across domains using a 2-stage flip-flop synchronizer chain.
+
+---
+
+# Project Structure
 
 ```text
 FIFO/
 │
 ├── rtl/                   # Synthesizable VHDL design files
-│   ├── fifo.vhd           # Top-level structural design wrapper
-│   ├── fifo_mem.vhd       # Dual-port synchronized memory array
-│   ├── fifo_ptr.vhd       # Generic pointer tracking logic
-│   ├── fifo_r_ptr.vhd     # Read-domain pointer generation & Gray conversion
-│   ├── fifo_w_ptr.vhd     # Write-domain pointer generation & Gray conversion
-│   └── fifo_synchronizer.vhd # 2-Stage flip-flop synchronizer chain
+│   ├── fifo.vhd
+│   ├── fifo_mem.vhd
+│   ├── fifo_ptr.vhd
+│   ├── fifo_r_ptr.vhd
+│   ├── fifo_w_ptr.vhd
+│   └── fifo_synchronizer.vhd
 │
-├── uvm/                   # SystemVerilog UVM verification suite
-│   ├── fifo_tb.sv         # Top-level hardware testbench test harness
-│   ├── fifo_top.sv        # Package wrapper importing components
-│   ├── fifo_if.sv         # SystemVerilog Interface with modports and assertions
-│   ├── fifo_env.sv        # UVM Environment container
-│   ├── fifo_scoreboard.sv # Transaction monitoring and dynamic data comparison
-│   ├── fifo_transaction.sv# Verification transaction item definition
-│   ├── fifo_test.sv       # Base UVM test and specific test cases
-│   └── fifo_sva.sv        # SystemVerilog Assertions (SVA) for protocol checking
+├── uvm/                   # UVM verification environment
+│   ├── fifo_tb.sv
+│   ├── fifo_top.sv
+│   ├── fifo_if.sv
+│   ├── fifo_env.sv
+│   ├── fifo_scoreboard.sv
+│   ├── fifo_transaction.sv
+│   ├── fifo_test.sv
+│   └── fifo_sva.sv
 │
-└── sim/                   # ModelSim automation workspace
-    └── run.do             # Tcl automation script for complete simulation execution
+└── sim/
+    └── run.do
+```
+
+---
+
+# FIFO Architecture
+
+## Top-Level Architecture
+
+![FIFO Architecture](docs/FIFO_Block_Diagram.png)
+
+### Key Design Features
+- Dual-clock asynchronous FIFO
+- Independent read/write clock domains
+- Gray-code pointer generation
+- 2FF synchronizer chain
+- Parameterized FIFO depth and width
+- Dual-port memory architecture
+- Safe full/empty detection logic
+
+---
+
+# Pointer Synchronization
+
+## Gray-Code Synchronization Path
+
+![Gray Pointer Synchronization](docs/gray_sync.png)
+
+### Synchronization Strategy
+- Binary pointers are converted to Gray-code
+- Gray pointers are synchronized across clock domains
+- 2-stage flip-flop synchronizers reduce metastability propagation risk
+- Full/empty flags are generated using synchronized pointers
+
+---
+
+# Verification Environment
+
+## UVM Testbench Architecture
+
+![UVM Environment](docs/uvm_env.png)
+
+### Verification Components
+- UVM driver
+- UVM monitor
+- UVM sequencer
+- Self-checking scoreboard
+- Functional coverage collector
+- SystemVerilog assertions
+- Constrained-random stimulus generation
+
+---
+
+# Verification Strategy
+
+The DUT was verified using both directed and constrained-random testing methodologies.
+
+## Features Verified
+
+| Verification Scenario | Status |
+|---|---|
+| FIFO Full Detection | ✅ |
+| FIFO Empty Detection | ✅ |
+| Overflow Protection | ✅ |
+| Underflow Protection | ✅ |
+| Simultaneous Read/Write | ✅ |
+| Pointer Wraparound | ✅ |
+| Asynchronous Clock Ratios | ✅ |
+| Gray Pointer Correctness | ✅ |
+| Reset Recovery | ✅ |
+| CDC Synchronization Behavior | ✅ |
+
+---
+
+# Assertions (SVA)
+
+SystemVerilog Assertions were used to verify critical FIFO behavior including:
+- Illegal write detection during FULL condition
+- Illegal read detection during EMPTY condition
+- Pointer progression correctness
+- Gray-code transition correctness
+- Full/empty flag behavior
+- Reset consistency
+
+---
+
+# Functional Coverage
+
+The verification environment includes functional coverage collection using SystemVerilog covergroups.
+
+## Coverage Goals
+- FIFO state transitions
+- Full/empty conditions
+- Pointer wraparound
+- Simultaneous read/write operations
+- Clock ratio variation
+- Reset behavior
+
+## Coverage Results
+
+| Coverage Type | Result |
+|---|---|
+| Functional Coverage | 100% |
+| Assertion Coverage | 100% |
+
+![Coverage Report](docs/coverage.png)
+
+---
+
+# Simulation Waveforms
+
+## FIFO Full Condition
+
+![FIFO Full](docs/wfull_waveform.png)
+
+## FIFO Empty Condition
+
+![FIFO Empty](docs/rempty_waveform.png)
+
+## Gray Pointer Synchronization
+
+![Gray Pointer](docs/gray_pointer_waveform.png)
+
+---
+
+# Running Simulation
+
+## ModelSim / QuestaSim
+
+```bash
+cd sim
+vsim -do run.do
+```
+
+---
+
+# Tools & Technologies
+
+## Design
+- VHDL
+- Clock Domain Crossing (CDC)
+- Gray-code synchronization
+- Dual-port memory architecture
+
+## Verification
+- SystemVerilog
+- UVM (Universal Verification Methodology)
+- SVA (SystemVerilog Assertions)
+- Functional Coverage
+- Constrained-Random Verification
+
+## Simulation
+- ModelSim / QuestaSim
+
+---
+
+# Lessons Learned
+
+This project provided practical experience in:
+- CDC-safe digital design
+- Metastability mitigation techniques
+- Gray-code synchronization
+- UVM-based verification methodology
+- Assertion-based verification
+- Functional coverage closure
+- Debugging asynchronous systems
+- Scoreboard-based checking
+- Simulation automation using Tcl scripts
+
+---
+
+# Future Improvements
+
+Potential future extensions include:
+- Parameterized regression testing
+- Formal verification integration
+- FPGA implementation
+- AXI-stream interface support
+- Continuous Integration (CI) automation
+- Multi-channel FIFO support
+
+---
+
+# Author
+
+Shlomo Abrams
+
+Electrical Engineering Student  
+Digital Design & Verification Enthusiast
+
+GitHub:
+https://github.com/ShlomoAbrams
