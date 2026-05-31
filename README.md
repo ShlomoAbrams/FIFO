@@ -110,6 +110,14 @@ FIFO/
 
 ![UVM Environment](docs/uvm_env.png)
 
+## UVM Verification Architecture
+
+The testbench uses industry-standard UVM methodology:
+- **Testbench Layer**: Write and Read agents generate transactions
+- **TLM & VIF Layer**: Translates UVM transactions to RTL signals
+- **Hardware Layer**: DUT includes FIFO memory with CDC synchronizers
+- **Scoreboard**: Compares expected vs. actual data with coverage metrics
+
 ### Verification Components
 - UVM driver
 - UVM monitor
