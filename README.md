@@ -186,6 +186,7 @@ The verification environment includes functional coverage collection using Syste
 ---
 
 # Simulation Waveforms
+![Waveform Simulation](docs/Waveform_Simulation.png)
 
 ## FIFO Full Condition
 
