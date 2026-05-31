@@ -77,7 +77,7 @@ FIFO/
 
 ## Top-Level Architecture
 
-![FIFO Architecture](docs/FIFO_Block_Diagram.png)
+![FIFO Architecture](docs/FIFO_Block_Diagram.jpg)
 
 ### Key Design Features
 - Dual-clock asynchronous FIFO
@@ -108,7 +108,7 @@ FIFO/
 
 ## UVM Testbench Architecture
 
-![UVM Environment](docs/uvm_env.png)
+![UVM Environment](docs/UVM_Architecture.png)
 
 ## UVM Verification Architecture
 
