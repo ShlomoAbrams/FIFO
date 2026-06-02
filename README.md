@@ -202,6 +202,32 @@ The verification environment includes functional coverage collection using Syste
 
 ---
 
+## Write Pointer & Full Logic (`wfull`)
+The FIFO asserts the full flag when the write pointer catches up to the synchronized read pointer. Because we are using Gray code across clock domains, the `wfull` condition is met when the pointers are equal, but the two Most Significant Bits (MSBs) are inverted.
+
+![FIFO Full Waveform](docs/wfull_waveform.png)
+
+---
+
+## Read Pointer & Empty Logic (`rempty`)
+The FIFO asserts the empty flag when the read pointer catches up to the synchronized write pointer. This occurs when all bits of the read pointer and the synchronized write pointer perfectly match.
+
+![FIFO Empty Waveform](docs/rempty_waveform.png)
+
+## Clock Domain Crossing (CDC) Synchronization
+
+To safely pass the Gray-coded pointers between the independent read and write clock domains, the design utilizes 2-stage flip-flop synchronizers to mitigate metastability. 
+
+### Read-to-Write Synchronization
+The read pointer crosses into the write domain. It is captured by the write clock (`wclk`) through two stages (`q1ptr_g` and `q2ptr_g`) before being evaluated for the full condition.
+![Read to Write Sync](docs/r2w_sync_waveform.png)
+
+---
+
+### Write-to-Read Synchronization
+The write pointer crosses into the read domain. It is captured by the read clock (`rclk`) through two stages before being evaluated for the empty condition.
+![Write to Read Sync](docs/w2r_sync_waveform.png)
+
 # Running Simulation
 
 ## ModelSim / QuestaSim

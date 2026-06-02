@@ -68,28 +68,38 @@ add wave -expand -group "Read Domain" -color "SpringGreen" -position insertpoint
 add wave -expand -group "Read Domain" -color "SpringGreen" -label "rclken (Read Enable)" sim:/fifo_top/dut/fifo_mem_unit/rclken
 add wave -expand -group "Read Domain" -color "SpringGreen" -radix unsigned -label "raddr (Read Addr)" sim:/fifo_top/dut/fifo_mem_unit/raddr
 
-# ============================================================================
-# WHITE-BOX DEBUGGING (Secondary - Collapsed Folders)
-# ============================================================================
-
 # THE FULL LOGIC PROOF (Combinational Cause & Effect) 
-add wave -group "Write Pointers: wfull proof" -color "Gold" -label "wptr_g_next" sim:/fifo_top/dut/wptr_full_unit/wptr_g_next
-add wave -group "Write Pointers: wfull proof" -color "Gold" -label "w2q_rptr" sim:/fifo_top/dut/wptr_full_unit/w2q_rptr
-add wave -group "Write Pointers: wfull proof" -color "Orange" -label "wfull_next" sim:/fifo_top/dut/wptr_full_unit/wfull_next
-add wave -group "Write Pointers: wfull proof" -color "Red" -label "wfull (Registered)" sim:/fifo_top/dut/wfull
+add wave -expand -group "FIFO Full Condition" -color "Gold" -label "wptr_g_next" sim:/fifo_top/dut/wptr_full_unit/wptr_g_next
+add wave -expand -group "FIFO Full Condition" -color "Gold" -label "w2q_rptr" sim:/fifo_top/dut/wptr_full_unit/w2q_rptr
+add wave -expand -group "FIFO Full Condition" -color "Orange" -label "wfull_next" sim:/fifo_top/dut/wptr_full_unit/wfull_next
+add wave -expand -group "FIFO Full Condition" -color "Red" -label "wfull (Registered)" sim:/fifo_top/dut/wfull
+add wave -expand -group "FIFO Full Condition" -color "White" -label "wclk" sim:/fifo_top/dut/wclk
 
 # THE EMPTY LOGIC PROOF (Combinational Cause & Effect) 
-add wave -group "Read Pointers: rempty proof" -color "Gold" -label "rptr_g_next" sim:/fifo_top/dut/rptr_empty_unit/rptr_g_next
-add wave -group "Read Pointers: rempty proof" -color "Gold" -label "r2q_wptr" sim:/fifo_top/dut/rptr_empty_unit/r2q_wptr
-add wave -group "Read Pointers: rempty proof" -color "Orange" -label "rempty_next" sim:/fifo_top/dut/rptr_empty_unit/rempty_next
-add wave -group "Read Pointers: rempty proof" -color "Red" -label "rempty (Registered)" sim:/fifo_top/dut/rempty
+add wave -expand -group "FIFO Empty Condition" -color "Gold" -label "rptr_g_next" sim:/fifo_top/dut/rptr_empty_unit/rptr_g_next
+add wave -expand -group "FIFO Empty Condition" -color "Gold" -label "r2q_wptr" sim:/fifo_top/dut/rptr_empty_unit/r2q_wptr
+add wave -expand -group "FIFO Empty Condition" -color "Orange" -label "rempty_next" sim:/fifo_top/dut/rptr_empty_unit/rempty_next
+add wave -expand -group "FIFO Empty Condition" -color "Red" -label "rempty (Registered)" sim:/fifo_top/dut/rempty
+add wave -expand -group "FIFO Empty Condition" -color "White" -label "rclk"  sim:/fifo_top/dut/rclk
+
+# READ-TO-WRITE SYNCHRONIZATION (CDC)
+add wave -expand -group "Read-to-Write Sync" -color "White" -label "rclk (Source Clock)" sim:/fifo_top/dut/rclk
+add wave -expand -group "Read-to-Write Sync" -color "Plum" -label "ptr_g (Async Input)" sim:/fifo_top/dut/read_to_write_sync/ptr_g
+add wave -expand -group "Read-to-Write Sync" -color "White" -label "wclk (Dest Clock)" sim:/fifo_top/dut/wclk
+add wave -expand -group "Read-to-Write Sync" -color "MediumOrchid" -label "q1ptr_g (Stage 1)" sim:/fifo_top/dut/read_to_write_sync/q1ptr_g
+add wave -expand -group "Read-to-Write Sync" -color "Magenta" -label "q2ptr_g (Stage 2)" sim:/fifo_top/dut/read_to_write_sync/q2ptr_g
+
+# WRITE-TO-READ SYNCHRONIZATION (CDC)
+add wave -expand -group "Write-to-Read Sync" -color "White" -label "wclk (Source Clock)" sim:/fifo_top/dut/wclk
+add wave -expand -group "Write-to-Read Sync" -color "Plum" -label "ptr_g (Async Input)" sim:/fifo_top/dut/write_to_read_sync/ptr_g
+add wave -expand -group "Write-to-Read Sync" -color "White" -label "rclk (Dest Clock)" sim:/fifo_top/dut/rclk
+add wave -expand -group "Write-to-Read Sync" -color "MediumOrchid" -label "q1ptr_g (Stage 1)" sim:/fifo_top/dut/write_to_read_sync/q1ptr_g
+add wave -expand -group "Write-to-Read Sync" -color "Magenta" -label "q2ptr_g (Stage 2)" sim:/fifo_top/dut/write_to_read_sync/q2ptr_g
 
 # Formatting
 configure wave -namecolwidth 250
 configure wave -valuecolwidth 100
 wave zoom full
-
-
 
 # 8. Run Simulation and Generate Report[cite: 5]
 run -all
