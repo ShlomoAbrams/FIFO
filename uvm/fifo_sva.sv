@@ -15,20 +15,20 @@ module fifo_sva #(
 localparam DEPTH = ( 1 << ADDR_WIDTH); // DEPTH = 2^ADDR_WIDTH by shifting 1 left by ADDR_WIDTH bits.
 
 // Gray w2q_rptr -> Binary conversion
-logic [ADDR_WIDTH:0] w2q_rptr_bin; 	// contain the binary version of the pointer
-always_comb begin					// convert w2q_rptr to binary
-	w2q_rptr_bin[ADDR_WIDTH] = w2q_rptr[ADDR_WIDTH];		// first binary bit is identical to gray 
-	for (int i = ADDR_WIDTH-1; i>=0; i--) begin			// loop 
-		w2q_rptr_bin[i] = w2q_rptr_bin[i+1] ^ w2q_rptr[i]; 	// binary bit is xor of current gray and preveis binary
+logic [ADDR_WIDTH:0] w2q_rptr_bin; 	// Contains the binary version of the pointer
+always_comb begin					// Convert w2q_rptr to binary
+	w2q_rptr_bin[ADDR_WIDTH] = w2q_rptr[ADDR_WIDTH];		// First binary bit is identical to Gray
+	for (int i = ADDR_WIDTH-1; i>=0; i--) begin			// Loop
+		w2q_rptr_bin[i] = w2q_rptr_bin[i+1] ^ w2q_rptr[i]; 	// Binary bit is XOR of current Gray and previous binary
 	end
 end
 
 // Gray r2q_wptr -> Binary conversion
-logic [ADDR_WIDTH:0] r2q_wptr_bin; 	// contain the binary version of the pointer
-always_comb begin					// convert r2q_eptr to binary
-	r2q_wptr_bin[ADDR_WIDTH] = r2q_wptr[ADDR_WIDTH];		// first binary bit is identical to gray 
-	for (int i = ADDR_WIDTH-1; i>=0; i--) begin			// loop 
-		r2q_wptr_bin[i] = r2q_wptr_bin[i+1] ^ r2q_wptr[i]; 	// binary bit is xor of current gray and preveis binary
+logic [ADDR_WIDTH:0] r2q_wptr_bin; 	// Contains the binary version of the pointer
+always_comb begin					// Convert r2q_wptr to binary
+	r2q_wptr_bin[ADDR_WIDTH] = r2q_wptr[ADDR_WIDTH];		// First binary bit is identical to Gray
+	for (int i = ADDR_WIDTH-1; i>=0; i--) begin			// Loop
+		r2q_wptr_bin[i] = r2q_wptr_bin[i+1] ^ r2q_wptr[i]; 	// Binary bit is XOR of current Gray and previous binary
 	end
 end
 
@@ -85,23 +85,23 @@ fifo_r_cg r_cg = new(); // create an instance
 		if (rrst_n) r_cg.sample(); // samples every cycle read signal values
 	end
 
-// Write side Reset Asserion - pointers and full flag reset
+// Write side Reset Assertion - pointers and full flag reset
 assert property (@(posedge wclk) 
-!wrst_n |=> (waddr == '0) && (wptr_g_cur == '0) && (wptr_b_cur == '0) && (wfull == 0) // check one cycle that siganls are reset
+!wrst_n |=> (waddr == '0) && (wptr_g_cur == '0) && (wptr_b_cur == '0) && (wfull == 0) // Check one cycle that signals are reset
 );
 
 // Read Side Reset Assertion - pointers and empty flag reset
 assert property (@(posedge rclk) 
-!rrst_n |=> (raddr == '0) && (rptr_g_cur == '0) && (rptr_b_cur == '0) && (rempty == 1) // check one cycle that siganls are reset
+!rrst_n |=> (raddr == '0) && (rptr_g_cur == '0) && (rptr_b_cur == '0) && (rempty == 1) // Check one cycle that signals are reset
 );
 
-// Write Pointer stability - No Overwrite - when full then pointer doesnt increment.
+// Write Pointer stability - No Overwrite - when full then pointer doesn't increment.
 assert property (@(posedge wclk) 
 disable iff(!wrst_n)
 (wfull && winc) |=> $stable(wptr_g_cur) && $stable(wptr_b_cur)
 );
 
-// Read Pointer stability - No Overread - when empty then pointer doesnt increment.
+// Read Pointer stability - No Overread - when empty then pointer doesn't increment.
 assert property (@(posedge rclk) 
 disable iff(!rrst_n)
 (rempty && rinc) |=> $stable(rptr_g_cur) && $stable(rptr_b_cur)
@@ -161,17 +161,17 @@ rclken |-> (!rempty && rinc)
 	end
 	
 	always_ff @(posedge rclk or negedge rrst_n) begin 
-		if ($past(rclken) && !$past(rempty)) begin	// if reading fifo
-			assert (rdata == fifo_data[$past(raddr)]) // check that data read equals data saved.
-			else $error("Data mismatch at read address %0h, expected %0h, got %0h", $past(raddr), fifo_data[$past(raddr)], rdata); // error where the data didnt match.
+		if ($past(rclken) && !$past(rempty)) begin	// If reading FIFO
+			assert (rdata == fifo_data[$past(raddr)]) // Check that data read equals data saved.
+			else $error("Data mismatch at read address %0h, expected %0h, got %0h", $past(raddr), fifo_data[$past(raddr)], rdata); // Error where the data didn't match.
 		end
 	end
 
-// Memory manegment: (write_ptr - synchronized read_ptr) <= DEPTH]. 
+// Memory management: (write_ptr - synchronized read_ptr) <= DEPTH]. 
 property memory_management;
-	@(posedge wclk) disable iff (!wrst_n)		// Check that write & read pointer arent out of bound. 
+	@(posedge wclk) disable iff (!wrst_n)		// Check that write & read pointer aren't out of bounds. 
 												// Uses synchronized read pointer (w2q_rptr_bin), so check is slightly pessimistic but guarantees safety. 
-	w_occupancy <= (DEPTH); 	// Counters are ADDR_WIDTH+1 bit long so their difference can exceed DEPTH in case of overflow. Cast result to (ADDR_WIDTH+1) to force modular arithmetic This handles pointer wrap-around correctly by truncating expanded 32-bit signed results to the physical 5-bit pointer distance, preventing false assertion failures
+	w_occupancy <= (DEPTH); 	// Counters are ADDR_WIDTH+1 bit long so their difference can exceed DEPTH in case of overflow. Cast result to (ADDR_WIDTH+1) to force modular arithmetic. This handles pointer wrap-around correctly by truncating expanded 32-bit signed results to the physical 5-bit pointer distance, preventing false assertion failures.
 
 endproperty
 

@@ -1,16 +1,14 @@
-`include "uvm_macros.svh"
-import uvm_pkg::*;
-
 class fifo_w_burst_sequence extends uvm_sequence #(fifo_transaction); // BLUEPRINT: A burst sequence of transactions which the driver will push one by one to fill fifo
 	`uvm_object_utils(fifo_w_burst_sequence) // FACTORY: Register in UVM library 
+	bit stop_seq = 0; // Control flag to stop sequence cleanly
 
-	function new(string name = "fifo_w_burst_sequence"); // CONSTUCTOR: Sequences are objects (without parents)
-		super.new(name); // establish compunents name
+	function new(string name = "fifo_w_burst_sequence"); // CONSTRUCTOR: Sequences are objects (without parents)
+		super.new(name); // establish component's name
 	endfunction
 
 	virtual task body(); // THE BODY: the main task
 
-		forever begin 
+		while (!stop_seq) begin 
 			fifo_transaction req; // Handle for transaction
 			req = fifo_transaction::type_id::create("req");
 			start_item(req);

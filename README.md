@@ -4,7 +4,7 @@
 
 ---
 
-# Overview
+# Project Overview
 
 This project implements a parameterized asynchronous FIFO (First-In, First-Out) buffer designed for safe data transfer between independent clock domains.
 
@@ -188,28 +188,20 @@ The verification environment includes functional coverage collection using Syste
 # Simulation Waveforms
 ![Waveform Simulation](docs/Waveform_Simulation.png)
 
-## FIFO Full Condition
-
-![FIFO Full](docs/wfull_waveform.png)
-
-## FIFO Empty Condition
-
-![FIFO Empty](docs/rempty_waveform.png)
-
-## Gray Pointer Synchronization
-
-![Gray Pointer](docs/gray_pointer_waveform.png)
-
 ---
+## Read & Write Transactions 
+This waveform demonstrates standard FIFO data path operations. Data is written into the memory array (`wdata`) on the write clock domain when `winc` is asserted. It is subsequently read out (`rdata`) on the read clock domain in a First-In-First-Out sequence. The integrity of the data stream (e.g., `A7`, `5A`, `AF`) is preserved perfectly as it crosses the asynchronous boundary.
 
-## Write Pointer & Full Logic (`wfull`)
+![Read & Write Waveform](docs/read_&_write_waveform.png)
+
+## FIFO Full Condition
 The FIFO asserts the full flag when the write pointer catches up to the synchronized read pointer. Because we are using Gray code across clock domains, the `wfull` condition is met when the pointers are equal, but the two Most Significant Bits (MSBs) are inverted.
 
 ![FIFO Full Waveform](docs/wfull_waveform.png)
 
 ---
 
-## Read Pointer & Empty Logic (`rempty`)
+## FIFO Empty Condition
 The FIFO asserts the empty flag when the read pointer catches up to the synchronized write pointer. This occurs when all bits of the read pointer and the synchronized write pointer perfectly match.
 
 ![FIFO Empty Waveform](docs/rempty_waveform.png)
@@ -228,63 +220,6 @@ The read pointer crosses into the write domain. It is captured by the write cloc
 The write pointer crosses into the read domain. It is captured by the read clock (`rclk`) through two stages before being evaluated for the empty condition.
 ![Write to Read Sync](docs/w2r_sync_waveform.png)
 
-# Running Simulation
-
-## ModelSim / QuestaSim
-
-```bash
-cd sim
-vsim -do run.do
-```
-
----
-
-# Tools & Technologies
-
-## Design
-- VHDL
-- Clock Domain Crossing (CDC)
-- Gray-code synchronization
-- Dual-port memory architecture
-
-## Verification
-- SystemVerilog
-- UVM (Universal Verification Methodology)
-- SVA (SystemVerilog Assertions)
-- Functional Coverage
-- Constrained-Random Verification
-
-## Simulation
-- ModelSim / QuestaSim
-
----
-
-# Lessons Learned
-
-This project provided practical experience in:
-- CDC-safe digital design
-- Metastability mitigation techniques
-- Gray-code synchronization
-- UVM-based verification methodology
-- Assertion-based verification
-- Functional coverage closure
-- Debugging asynchronous systems
-- Scoreboard-based checking
-- Simulation automation using Tcl scripts
-
----
-
-# Future Improvements
-
-Potential future extensions include:
-- Parameterized regression testing
-- Formal verification integration
-- FPGA implementation
-- AXI-stream interface support
-- Continuous Integration (CI) automation
-- Multi-channel FIFO support
-
----
 
 # Author
 

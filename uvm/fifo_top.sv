@@ -1,13 +1,15 @@
 `include "uvm_macros.svh"
 import uvm_pkg::*;
-module fifo_connector ( // bridge between VHLD Signals and SV interface
+import fifo_pkg::*;
+
+module fifo_connector ( // bridge between VHDL Signals and SV interface
 		input wclken_in,
 		input rclken_in
 	);
 		assign fifo_top.p_if.wclken_wire = wclken_in; // assign internal signal of dut to interface
 		assign fifo_top.p_if.rclken_wire = rclken_in; // assign internal signal of dut to interface
 	endmodule
-module fifo_top; 					// Permanent Module to simulate the hardware 
+module fifo_top; 					// Permanent module to simulate the hardware 
 	bind fifo fifo_sva #(.DATA_WIDTH(8), .ADDR_WIDTH(4)) sva_inst (
 		.wclk(wclk),	
 		.wrst_n	(wrst_n),	

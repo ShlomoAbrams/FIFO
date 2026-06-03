@@ -1,4 +1,4 @@
-`timescale 1ns/1ps // cycle time 1ns, presision 1ps.
+`timescale 1ns/1ps // cycle time 1ns, precision 1ps.
 
 module fifo_tb();
 	parameter DATA_WIDTH = 8;
@@ -27,7 +27,7 @@ bind async_fifo async_fifo_sva #(
 	.DATA_WIDTH(DATA_WIDTH),
 	.ADDR_WIDTH(ADDR_WIDTH)
 	)
-	sva_inst (.*); // connects automatically all signal that have the same name in design to the assersions.
+	sva_inst (.*); // connects automatically all signals that have the same name in design to the assertions.
 
 	initial begin
 			// 1. Reset
@@ -51,7 +51,7 @@ bind async_fifo async_fifo_sva #(
 				@(posedge rclk);
 				rinc = ($urandom_range(0,99) < 60); // 60% chance to attempt a read 
 			end
-			// 3. Syncronizer Delay
+			// 3. Synchronizer Delay
 			winc = 0;
 			rinc = 0;
 			#100; // wait 50 ns so rempty will be low
@@ -64,31 +64,31 @@ bind async_fifo async_fifo_sva #(
 			$finish;
 	end
 	
-// Scoreboard: check if data flowing into the fifo is the data flowing out
-	logic [DATA_WIDTH-1:0] scoreboard_queue[$]; // stores all data written to fifo (infinite)
-	logic [DATA_WIDTH-1:0] expected_data; 		// stores the first data in que
+// Scoreboard: check if data flowing into the FIFO is the data flowing out
+	logic [DATA_WIDTH-1:0] scoreboard_queue[$]; // stores all data written to FIFO (infinite)
+	logic [DATA_WIDTH-1:0] expected_data; 		// stores the first data in queue
 	logic check_data_now = 1'b0; 				// bit to check if rdata is updated after rclk posedge
 
 always @(negedge rrst_n) begin  // Reset:
-		scoreboard_queue.delete();	// Reset Deletes all data
+		scoreboard_queue.delete();	// Reset deletes all data
 		check_data_now <= 1'b0;		// check data gets 0
 	end
 
 always @(posedge wclk) begin	// Savedata:	
 		if (winc && !wfull) begin
-			scoreboard_queue.push_back(wdata);	// stores data at the end of the que
+			scoreboard_queue.push_back(wdata);	// stores data at the end of the queue
 			if (scoreboard_queue.size() > DEPTH) begin 
-				$error("TB error: Scoreboard Overflow - Fifo Exceeded max capacity");
+				$error("TB error: Scoreboard Overflow - FIFO exceeded max capacity");
 			end
 		end
 	end
 	
 always @(posedge rclk) begin	// Check Scoreboard:				
 		if (rinc && !rempty) begin
-			expected_data <= scoreboard_queue.pop_front();	// release first in line from que
+			expected_data <= scoreboard_queue.pop_front();	// release first in line from queue
 			check_data_now <= 1'b1;	// Check Scoreboard next edge
 		end else begin 
-			check_data_now <= 1'b0; // Dont check on next edge
+			check_data_now <= 1'b0; // Don't check on next edge
 		end
 		if (check_data_now) begin // If read last cycle, check the result now
 			if (rdata !== expected_data) begin 				// mismatch
