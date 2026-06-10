@@ -30,7 +30,7 @@ module fifo_top; 					// Permanent module to simulate the hardware
 		.rptr_g_cur	(rptr_wire),
 		.wptr_b_cur(wptr_full_unit.wptr_b_cur),
 		.rptr_b_cur(rptr_empty_unit.rptr_b_cur),
-		.r2q_wptr(r2q_wptr),
+		.r2q_wptr(r2qs_wptr),
 		.w2q_rptr(w2q_rptr),
 		.wfull_wire(wfull_wire),
 		.rempty_wire(rempty_wire)
@@ -66,6 +66,6 @@ module fifo_top; 					// Permanent module to simulate the hardware
 	end
 	initial begin 
 		uvm_config_db#(virtual fifo_if)::set(null, "*", "vif", p_if); // CONFIG DATABASE: publish the physical interface (p_if) so components can find interface using "vif"
-		run_test("fifo_test");
+		run_test();
 	end
 endmodule

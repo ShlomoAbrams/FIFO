@@ -36,6 +36,7 @@ class fifo_scoreboard extends uvm_scoreboard;	// BLUEPRINT: Defines the Scoreboa
 		end
 		expected_queue.push_back(tr.data); 					// store incoming data in the back of the queue
 		`uvm_info("SCBD", $sformatf("Input Observed: %h. (Items in FIFO: %0d)", tr.data, expected_queue.size()), UVM_LOW) // Log input
+
 	endfunction
 	
 	virtual function void write_read(fifo_transaction tr);	// When Read Monitor calls ap.write() 
@@ -46,7 +47,7 @@ class fifo_scoreboard extends uvm_scoreboard;	// BLUEPRINT: Defines the Scoreboa
 		if (expected_queue.size() > 0) begin 				// check if we are expecting data to come out
 			expected_val = expected_queue.pop_front();		// Grab the oldest Item (First Out)
 			if (tr.data === expected_val) begin				// Compared values are equal
-				`uvm_info("SCBD", $sformatf("MATCH! Data: %h", tr.data), UVM_LOW)
+				`uvm_info("SCBD", $sformatf("MATCH! Data: %h.    (Items in FIFO: %0d)", tr.data, expected_queue.size()), UVM_LOW)
 			end else begin 									// Input doesn't equal output of FIFO
 				`uvm_error("SCBD", $sformatf("MISMATCH! Expected: %h, Got: %h", expected_val, tr.data)) // Triggers test failure in UVM report.
 			end	

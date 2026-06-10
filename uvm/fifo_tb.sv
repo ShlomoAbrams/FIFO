@@ -12,7 +12,7 @@ module fifo_tb();
 initial begin wclk = 0; forever #5 wclk = ~wclk; end // toggle wclk every 5 cycles of main clock (period 10ns, 100Mhz)
 initial begin rclk = 0; forever #7 rclk = ~rclk; end // toggle rclk every 7 cycles of main clock (period 14ns, ~71Mhz)
 
-async_fifo #(
+fifo #(
 	.DATA_WIDTH(DATA_WIDTH),
 	.ADDR_WIDTH(ADDR_WIDTH)
 	)
@@ -23,11 +23,36 @@ async_fifo #(
 	.wfull(wfull), .rempty(rempty),
 	.wdata(wdata), .rdata(rdata)
 	);
-bind async_fifo async_fifo_sva #(
+
+bind fifo fifo_sva #(
 	.DATA_WIDTH(DATA_WIDTH),
 	.ADDR_WIDTH(ADDR_WIDTH)
 	)
-	sva_inst (.*); // connects automatically all signals that have the same name in design to the assertions.
+	sva_inst (
+		.wclk(wclk),	
+		.wrst_n	(wrst_n),	
+		.winc	(winc),
+		.wdata	(wdata),
+		.wfull	(wfull),
+		.rclk	(rclk),	
+		.rrst_n	(rrst_n),	
+		.rinc	(rinc),
+		.rdata	(rdata),
+		.rempty	(rempty),
+
+		.wclken		(wclken_wire),
+		.rclken		(rclken_wire),
+		.waddr		(waddr_wire),
+		.raddr		(raddr_wire),
+		.wptr_g_cur	(wptr_wire),
+		.rptr_g_cur	(rptr_wire),
+		.wptr_b_cur(wptr_full_unit.wptr_b_cur),
+		.rptr_b_cur(rptr_empty_unit.rptr_b_cur),
+		.r2q_wptr(r2q_wptr),
+		.w2q_rptr(w2q_rptr),
+		.wfull_wire(wfull_wire),
+		.rempty_wire(rempty_wire)
+	);
 
 	initial begin
 			// 1. Reset

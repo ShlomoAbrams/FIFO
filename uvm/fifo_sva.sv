@@ -154,14 +154,17 @@ rclken |-> (!rempty && rinc)
 				fifo_data[i] <= '0; // initialize shadow Memory
 			end
 		end
-		else if (wclken && !wfull) begin // if writing into fifo
+		else if (wclken) begin // if writing into fifo
 			fifo_data[w_index] <= wdata; // store current wdata at w_index in fifo_data
 			w_index <= w_index + 1; // inc w_index
 		end
 	end
 	
 	always_ff @(posedge rclk or negedge rrst_n) begin 
-		if ($past(rclken) && !$past(rempty)) begin	// If reading FIFO
+		if (!rrst_n) begin
+			// Do nothing during reset
+		end 
+		else if ($past(rclken) && $past(rrst_n)) begin	// If reading FIFO and rrst_n was high
 			assert (rdata == fifo_data[$past(raddr)]) // Check that data read equals data saved.
 			else $error("Data mismatch at read address %0h, expected %0h, got %0h", $past(raddr), fifo_data[$past(raddr)], rdata); // Error where the data didn't match.
 		end

@@ -17,4 +17,5 @@ package fifo_pkg;
 	`include "fifo_scoreboard.sv"
 	`include "fifo_env.sv"
 	`include "fifo_test.sv"
+	`include "fifo_reset_recovery_test.sv"
 endpackage

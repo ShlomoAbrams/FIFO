@@ -2,10 +2,16 @@
 work/
 rtl_work/
 *.wlf
+wlft*
 *.mpf
 *.syn
 *.ano
 transcript
+tcl_stacktrace.txt
+
+# ModelSim Coverage Reports
+covhtml/
+covhtmlreport/
 
 # Python automation garbage (if you use scripts)
 __pycache__/

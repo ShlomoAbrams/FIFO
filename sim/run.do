@@ -4,7 +4,7 @@
 quit -sim
 
 # 2. Clean up previous database and log files
-catch { file delete -force vsim.wlf transcript fifo_cov.ucdb coverage_report.txt }
+catch { file delete -force vsim.wlf transcript fifo_cov.ucdb coverage_report.txt covhtmlreport }
 catch { foreach f [glob -nocomplain wlft*] { file delete -force $f } }
 if [file exists work] { 
     catch { vdel -all -lib work } 
@@ -22,16 +22,22 @@ set UVM_INC "+incdir+$UVM_SRC"
 vcom -reportprogress 300 -2008 -cover bcesxf \
     ../rtl/fifo_mem.vhd ../rtl/fifo_r_ptr.vhd ../rtl/fifo_w_ptr.vhd ../rtl/fifo_synchronizer.vhd ../rtl/fifo.vhd
 
-# 5. Compile SV files with Coverage
+# 5. Compile UVM Package WITHOUT coverage (keeps testbench out of design coverage metrics)
+vlog -sv -mfcu $UVM_INC -L mtiUvm ../uvm/fifo_pkg.sv
+
+# 6. Compile SV Top, Interface, and Assertions WITH coverage
 vlog -sv -mfcu $UVM_INC -cover bcesxf -L mtiUvm \
 	../uvm/fifo_if.sv \
 	../uvm/fifo_sva.sv \
-	../uvm/fifo_pkg.sv \
 	../uvm/fifo_top.sv
 
 # 6. Simulate with Coverage and Assertions enabled
+if {![info exists TESTNAME]} {
+    set TESTNAME "fifo_reset_recovery_test"
+}
+
 vsim -t 1ps -voptargs="+acc" -coverage -assertdebug -onfinish stop \
-     -L mtiUvm -sv_lib $UVM_DPI work.fifo_top +UVM_TESTNAME=fifo_test
+     -L mtiUvm -sv_lib $UVM_DPI work.fifo_top +UVM_TESTNAME=$TESTNAME
 
 # 7. FIFO Waveform Setup - Fully Grouped 
 
@@ -99,5 +105,9 @@ coverage save fifo_cov.ucdb
 # Generate a detailed text-based report for your project records
 coverage report -detail -cvg -directive -comments -output coverage_report.txt
 
+# Generate the HTML coverage report automatically
+coverage report -html -output covhtmlreport -assert -directive -cvg -code bcesxf
+exec cmd /c start covhtmlreport/index.html
+
 # Log completion
-echo "Simulation Finished. Matches recorded in scoreboard. Coverage report saved to coverage_report.txt"
+echo "Simulation Finished. Matches recorded in scoreboard. Coverage report saved to coverage_report.txt and HTML report to covhtml/"

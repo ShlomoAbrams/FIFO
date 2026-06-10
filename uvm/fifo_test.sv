@@ -19,8 +19,8 @@ class fifo_test extends uvm_test; // BLUEPRINT: The Test Defines specific scenar
 	virtual task run_phase(uvm_phase phase); // RUN PHASE:
 		fifo_w_sequence w_seq; 					// Create Write Sequence Handle
 		fifo_r_sequence r_seq;					// Create Read Sequence Handle
-		fifo_w_burst_sequence w_burst_seq, w_burst_stress_seq; 		// Create Write Burst Sequence handles
-		fifo_r_drain_sequence r_drain_seq, r_drain_stress_seq;		// Create Read Drain Sequence handles
+		fifo_w_burst_sequence w_burst_seq, w_burst_stress_seq; 	// Create Write Burst Sequence handles
+		fifo_r_drain_sequence r_drain_seq, r_drain_stress_seq;	// Create Read Drain Sequence handles
 		w_seq = fifo_w_sequence::type_id::create("w_seq"); // Create Write Sequence
 		r_seq = fifo_r_sequence::type_id::create("r_seq"); // Create Read Sequence
 		w_burst_seq = fifo_w_burst_sequence::type_id::create("w_burst_seq"); // Create Write Burst Sequence
@@ -69,6 +69,7 @@ class fifo_test extends uvm_test; // BLUEPRINT: The Test Defines specific scenar
 				repeat(2) @(posedge p_if.wclk);
 				p_if.wrst_n <= 1'b1; // deassert Reset 
 				p_if.rrst_n <= 1'b1; // deassert Reset 
+				repeat(5) @(posedge p_if.wclk);
 				w_burst_stress_seq.stop_seq = 1; // Stop write sequence cleanly
 				r_drain_stress_seq.stop_seq = 1; // Stop read sequence cleanly
 			end
