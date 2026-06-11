@@ -1,6 +1,6 @@
 # Asynchronous FIFO Design & UVM Verification Environment
 
-> High-performance asynchronous FIFO implemented in synthesizable VHDL and verified using a complete SystemVerilog UVM environment with constrained-random testing, assertions, scoreboarding, and functional coverage.
+> Asynchronous FIFO implemented in VHDL and verified using a SystemVerilog UVM environment with constrained-random testing, assertions, scoreboarding, and functional coverage.
 
 ---
 
@@ -247,6 +247,7 @@ The verification plan defines **12 distinct coverpoints and crosses** (split bet
 
 # Simulation Waveforms
 ![Waveform Simulation](docs/Waveform_Simulation.png)
+![FIFO Block Diagram](docs/FIFO_Block_Diagram_Black.jpg)
 
 ---
 ## Read & Write Transactions 
