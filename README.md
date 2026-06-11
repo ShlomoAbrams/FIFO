@@ -247,6 +247,7 @@ The verification plan defines **12 distinct coverpoints and crosses** (split bet
 
 # Simulation Waveforms
 ![Waveform Simulation](docs/Waveform_Simulation.png)
+# Waveforms Colors Match Diagram Signals
 ![FIFO Block Diagram](docs/FIFO_Block_Diagram_Black.jpg)
 
 ---
