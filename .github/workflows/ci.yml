@@ -1,0 +1,30 @@
+# ==============================================================================
+# GitHub Actions CI/CD Verification Workflow (.github/workflows/ci.yml)
+# Automatically runs verification test suite whenever code is pushed or PR created
+# ==============================================================================
+
+name: Async FIFO UVM Verification Pipeline
+
+# Trigger events: Run pipeline on push or pull requests targeting main/master branches
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  verify:
+    name: Run UVM Test Suite & SVA Assertion Verification
+    runs-on: windows-latest # Run on Windows virtual machine in GitHub cloud
+
+    steps:
+      # Step 1: Clone the repository source files into the CI environment
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Execute our PowerShell test runner (headless execution)
+      - name: Run PowerShell Verification Suite
+        run: |
+          Set-Location sim
+          .\run.ps1 -TestName all
+        shell: powershell

@@ -49,14 +49,18 @@ The synchronized Gray pointers are transferred across domains using a 2-stage fl
 ```text
 FIFO/
 │
-├── rtl/                   # Synthesizable VHDL design files
+├── .github/
+│   └── workflows/
+│       └── ci.yml             # GitHub Actions CI workflow
+│
+├── rtl/                       # Synthesizable VHDL design files
 │   ├── fifo.vhd
 │   ├── fifo_mem.vhd
 │   ├── fifo_r_ptr.vhd
 │   ├── fifo_w_ptr.vhd
 │   └── fifo_synchronizer.vhd
 │
-├── uvm/                   # UVM verification environment
+├── uvm/                       # UVM verification environment
 │   ├── fifo_env.sv
 │   ├── fifo_if.sv
 │   ├── fifo_pkg.sv
@@ -65,11 +69,12 @@ FIFO/
 │   ├── fifo_r_driver.sv
 │   ├── fifo_r_monitor.sv
 │   ├── fifo_r_sequence.sv
+│   ├── fifo_reset_recovery_test.sv # Reset recovery stress test
 │   ├── fifo_scoreboard.sv
 │   ├── fifo_sva.sv
-│   ├── fifo_tb.sv         # Legacy SV testbench
-│   ├── fifo_test.sv
-│   ├── fifo_top.sv
+│   ├── fifo_tb.sv             # Legacy SV testbench
+│   ├── fifo_test.sv           # Basic transaction & burst test
+│   ├── fifo_top.sv            # Testbench top module
 │   ├── fifo_transaction.sv
 │   ├── fifo_w_agent.sv
 │   ├── fifo_w_burst_sequence.sv
@@ -78,26 +83,48 @@ FIFO/
 │   └── fifo_w_sequence.sv
 │
 └── sim/
-    └── run.do
+    ├── run.do                 # Parameterized ModelSim TCL simulation script
+    └── run.ps1                # Automated PowerShell test runner (Headless & CI)
 ```
 
 ---
 
-# Quick Start: Simulation Instructions
+# Quick Start: Automated Verification & Simulation
 
-This project includes a fully automated simulation and reporting flow using ModelSim/QuestaSim:
+### Option 1: Automated Test Runner (Command Line)
+Run verification tests headlessly with automatic log parsing and PASS/FAIL status table:
 
-1. **Open ModelSim/QuestaSim.**
-2. **Change directory** to the `sim` folder:
+```cmd
+# Change directory to sim/
+cd sim
+
+# Run all tests automatically (fifo_test and fifo_reset_recovery_test)
+.\run.bat
+
+# Run a specific test
+.\run.bat fifo_reset_recovery_test
+
+# Run dynamic clock ratio sweeping (Fast Write Wclk=2ns / Slow Read Rclk=10ns)
+.\run.bat fifo_reset_recovery_test 2 10
+```
+
+### Option 2: Interactive ModelSim GUI (Waveforms)
+1. **Open ModelSim SE.**
+2. In the ModelSim command console, navigate to your `sim` directory:
    ```tcl
-   cd sim
+   cd z:/FIFO/sim
    ```
-3. **Execute the run script:**
+3. **Run desired test:**
    ```tcl
+   # Run basic test
    do run.do
-   ```
-4. **View results:** The script will automatically clean, compile VHDL and SystemVerilog files, configure waveform groupings, run the testbench, save UCDB metrics, and automatically launch the **100% hardware coverage HTML report** in your browser.
 
+   # Run reset recovery stress test
+   set TESTNAME fifo_reset_recovery_test; do run.do
+
+   # Run with custom clock frequencies (Write half-period=3ns, Read half-period=10ns)
+   set TESTNAME fifo_reset_recovery_test; set WCLK_HALF 3; set RCLK_HALF 10; do run.do
+   ```
 ---
 
 # FIFO Architecture
