@@ -1,6 +1,6 @@
 // FIFO interface: Bundles DUT signals into one plug and allows UVM components to access them. 
 // DUT signals = hardware pins. UVM driver = software controlling it. interface = a cable grouping all wires. virtual interface = giving software access to that cable
-interface fifo_if #(parameter DATA_WIDTH = 8) (	// # - so we can change parameter later.
+interface fifo_if #(parameter DATA_WIDTH = 8) (	// Parameterized interface cable
 	input logic wclk,
 	input logic rclk
 );

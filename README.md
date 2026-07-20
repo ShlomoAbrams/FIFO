@@ -49,10 +49,6 @@ The synchronized Gray pointers are transferred across domains using a 2-stage fl
 ```text
 FIFO/
 │
-├── .github/
-│   └── workflows/
-│       └── ci.yml             # GitHub Actions CI workflow
-│
 ├── rtl/                       # Synthesizable VHDL design files
 │   ├── fifo.vhd
 │   ├── fifo_mem.vhd
@@ -84,29 +80,54 @@ FIFO/
 │
 └── sim/
     ├── run.do                 # Parameterized ModelSim TCL simulation script
-    └── run.ps1                # Automated PowerShell test runner (Headless & CI)
+    ├── run.ps1                # Automated quiet PowerShell test runner script
+    └── run.bat                # Windows Batch wrapper script (Quiet Mode)
 ```
 
 ---
 
 # Quick Start: Automated Verification & Simulation
 
-### Option 1: Automated Test Runner (Command Line)
-Run verification tests headlessly with automatic log parsing and PASS/FAIL status table:
+## Dynamic Simulation Parameters
+
+You can dynamically configure **all 4 simulation parameters** at runtime without re-compiling the design:
+
+| Parameter | Description | PowerShell Switch | Batch Position | Default Value | Example Value |
+| :--- | :--- | :--- | :---: | :---: | :---: |
+| **`Wclk`** | Write Clock Half-Period (ns) | `-Wclk <ns>` | Position 2 | `5` (100 MHz) | `2` (250 MHz) |
+| **`Rclk`** | Read Clock Half-Period (ns) | `-Rclk <ns>` | Position 3 | `7` (~71.4 MHz) | `10` (50 MHz) |
+| **`DataWidth`** | Hardware Data Bus Width (bits) | `-DataWidth <bits>` | Position 4 | `8` bits | `8` bits |
+| **`AddrWidth`** | Address Width / Memory Depth ($\text{Depth} = 2^{\text{AddrWidth}}$) | `-AddrWidth <bits>` | Position 5 | `4` (16 items) | `5` (32 items) / `6` (64 items) |
+
+---
+
+### Option 1: Automated Test Runner (Command Line - Quiet Mode)
 
 ```cmd
 # Change directory to sim/
-cd sim
+cd z:\FIFO\sim
 
-# Run all tests automatically (fifo_test and fifo_reset_recovery_test)
+# 1. Default Run (fifo_test & reset test | 100MHz vs 71.4MHz | Depth=16)
 .\run.bat
 
-# Run a specific test
-.\run.bat fifo_reset_recovery_test
-
-# Run dynamic clock ratio sweeping (Fast Write Wclk=2ns / Slow Read Rclk=10ns)
+# 2. Change Write & Read Clocks (Fast Write Wclk=2ns / Slow Read Rclk=10ns)
 .\run.bat fifo_reset_recovery_test 2 10
+
+# 3. Change Address Amount / FIFO Depth (AddrWidth=5 -> 32 addresses)
+.\run.bat fifo_test 5 7 8 5
+
+# 4. Change ALL 4 Parameters Simultaneously (Fast Write, Slow Read, 32 Addresses)
+# Syntax: .\run.bat [TestName] [Wclk] [Rclk] [DataWidth] [AddrWidth]
+.\run.bat fifo_reset_recovery_test 2 10 8 5
 ```
+
+#### PowerShell (Explicit Named Parameters):
+```powershell
+# Configure all 4 parameters by name:
+.\run.ps1 -TestName fifo_reset_recovery_test -Wclk 2 -Rclk 10 -DataWidth 8 -AddrWidth 5
+```
+
+---
 
 ### Option 2: Interactive ModelSim GUI (Waveforms)
 1. **Open ModelSim SE.**
@@ -114,16 +135,19 @@ cd sim
    ```tcl
    cd z:/FIFO/sim
    ```
-3. **Run desired test:**
+3. **Run test with custom parameters:**
    ```tcl
-   # Run basic test
+   # 1. Run basic test (default settings)
    do run.do
 
-   # Run reset recovery stress test
-   set TESTNAME fifo_reset_recovery_test; do run.do
+   # 2. Run reset test with custom clocks (Wclk=2ns, Rclk=10ns)
+   set TESTNAME fifo_reset_recovery_test; set WCLK_HALF 2; set RCLK_HALF 10; do run.do
 
-   # Run with custom clock frequencies (Write half-period=3ns, Read half-period=10ns)
-   set TESTNAME fifo_reset_recovery_test; set WCLK_HALF 3; set RCLK_HALF 10; do run.do
+   # 3. Run with 32 memory addresses (ADDR_WIDTH=5)
+   set TESTNAME fifo_test; set ADDR_WIDTH 5; do run.do
+
+   # 4. Configure ALL 4 parameters simultaneously in ModelSim console:
+   set TESTNAME fifo_reset_recovery_test; set WCLK_HALF 2; set RCLK_HALF 10; set ADDR_WIDTH 5; do run.do
    ```
 ---
 

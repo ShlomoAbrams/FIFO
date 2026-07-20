@@ -1,7 +1,8 @@
 @echo off
 REM ==============================================================================
 REM Windows Batch Runner (run.bat)
-REM Executes automated UVM test runner without PowerShell policy blocks
+REM Executes automated UVM test runner quietly with full parameter passing
+REM Usage: run.bat [TestName] [Wclk] [Rclk] [DataWidth] [AddrWidth]
 REM ==============================================================================
 
 setlocal
@@ -15,7 +16,12 @@ if "%WCLK_HALF%"=="" set WCLK_HALF=5
 set RCLK_HALF=%3
 if "%RCLK_HALF%"=="" set RCLK_HALF=7
 
-echo Launching Async FIFO UVM Automated Verification Suite...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$TestName='%TEST_NAME%'; $Wclk=%WCLK_HALF%; $Rclk=%RCLK_HALF%; Get-Content '%~dp0run.ps1' | Out-String | Invoke-Expression"
+set DATA_WIDTH=%4
+if "%DATA_WIDTH%"=="" set DATA_WIDTH=8
+
+set ADDR_WIDTH=%5
+if "%ADDR_WIDTH%"=="" set ADDR_WIDTH=4
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$t='%TEST_NAME%'; $w=[int]%WCLK_HALF%; $r=[int]%RCLK_HALF%; $dw=[int]%DATA_WIDTH%; $aw=[int]%ADDR_WIDTH%; $s = Get-Content '%~dp0run.ps1' -Raw; & ([scriptblock]::Create($s)) -TestName $t -Wclk $w -Rclk $r -DataWidth $dw -AddrWidth $aw"
 
 endlocal

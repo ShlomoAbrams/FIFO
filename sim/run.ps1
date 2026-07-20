@@ -1,29 +1,32 @@
 <#
 .SYNOPSIS
-    Automated Headless Test Runner for Async FIFO UVM Verification Environment.
+    Automated Quiet Test Runner for Async FIFO UVM Verification Environment.
 .DESCRIPTION
-    Launches ModelSim headlessly or in GUI mode, sweeps test scenarios, passes dynamic clock arguments,
-    parses transcript logs for errors, and reports overall verification status.
+    Launches ModelSim headlessly, sweeps test scenarios, passes dynamic clock arguments and
+    hardware parameters (DATA_WIDTH, ADDR_WIDTH), parses logs for UVM errors, and displays a clean status table.
 .PARAMETER TestName
     Target test to run: 'fifo_test', 'fifo_reset_recovery_test', or 'all' (default).
 .PARAMETER Wclk
     Write clock half-period in nanoseconds (default: 5).
 .PARAMETER Rclk
     Read clock half-period in nanoseconds (default: 7).
-.PARAMETER Gui
-    Launch in interactive GUI mode instead of batch mode.
+.PARAMETER DataWidth
+    FIFO Data Width in bits (default: 8).
+.PARAMETER AddrWidth
+    FIFO Address Width in bits (default: 4 -> Depth = 16).
+.PARAMETER Verbose
+    Show raw ModelSim output instead of hiding compilation logs.
 .PARAMETER Clean
     Clean build artifacts and exit.
-.EXAMPLE
-    .\run.ps1 -TestName all
-    .\run.ps1 -TestName fifo_reset_recovery_test -Wclk 2 -Rclk 10
 #>
 
 param(
     [string]$TestName = "all",
     [int]$Wclk = 5,
     [int]$Rclk = 7,
-    [switch]$Gui,
+    [int]$DataWidth = 8,
+    [int]$AddrWidth = 4,
+    [switch]$Verbose,
     [switch]$Clean
 )
 
@@ -56,7 +59,7 @@ $SimDir = $PSScriptRoot
 if ($Clean) {
     Write-Host "Cleaning simulation directory..." -ForegroundColor Yellow
     Set-Location $SimDir
-    Remove-Item -Recurse -Force work, covhtmlreport, covhtml, fifo_cov.ucdb, transcript, *.wlf -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force work, covhtmlreport, covhtml, fifo_cov.ucdb, transcript, *.wlf, vsim_run.log -ErrorAction SilentlyContinue
     Write-Host "Clean completed." -ForegroundColor Green
     exit 0
 }
@@ -69,11 +72,13 @@ if ($TestName -eq "all") {
     $TestsToRun = @($TestName)
 }
 
+$FifoDepth = [math]::Pow(2, $AddrWidth)
+
 Write-Host "========================================================" -ForegroundColor Cyan
-Write-Host " Async FIFO UVM Automated Verification Suite" -ForegroundColor Cyan
-Write-Host " ModelSim Path : $VsimPath" -ForegroundColor Gray
-Write-Host " Write Clock   : Half-Period = ${Wclk}ns (Freq = $([math]::Round(500/$Wclk, 1)) MHz)" -ForegroundColor Gray
-Write-Host " Read Clock    : Half-Period = ${Rclk}ns (Freq = $([math]::Round(500/$Rclk, 1)) MHz)" -ForegroundColor Gray
+Write-Host " Async FIFO UVM Automated Test Suite" -ForegroundColor Cyan
+Write-Host " Hardware Config: Data Width = ${DataWidth}-bit | Depth = ${FifoDepth} (${AddrWidth}-bit addr)" -ForegroundColor Gray
+Write-Host " Write Clock     : Half-Period = ${Wclk}ns (Freq = $([math]::Round(500/$Wclk, 1)) MHz)" -ForegroundColor Gray
+Write-Host " Read Clock      : Half-Period = ${Rclk}ns (Freq = $([math]::Round(500/$Rclk, 1)) MHz)" -ForegroundColor Gray
 Write-Host "========================================================" -ForegroundColor Cyan
 
 $Results = @()
@@ -82,17 +87,18 @@ $OverallSuccess = $true
 Set-Location $SimDir
 
 foreach ($t in $TestsToRun) {
-    Write-Host "`nRunning Test: $t..." -ForegroundColor Yellow
+    Write-Host -NoNewline "Running $t... "
 
     if (Test-Path "transcript") { Remove-Item "transcript" -Force }
 
-    $ModeFlag = if ($Gui) { "" } else { "-c" }
-    $DoCommand = "set TESTNAME $t; set WCLK_HALF $Wclk; set RCLK_HALF $Rclk; do run.do"
-    if (-not $Gui) {
-        $DoCommand += "; quit -f"
-    }
+    $DoCommand = "set TESTNAME $t; set WCLK_HALF $Wclk; set RCLK_HALF $Rclk; set DATA_WIDTH $DataWidth; set ADDR_WIDTH $AddrWidth; do run.do; quit -f"
 
-    $Process = Start-Process -FilePath $VsimPath -ArgumentList "$ModeFlag -do `"$DoCommand`"" -NoNewWindow -PassThru -Wait
+    # RUN MODELSIM QUIETLY (Redirect output to vsim_run.log to avoid terminal clutter)
+    if ($Verbose) {
+        $Process = Start-Process -FilePath $VsimPath -ArgumentList "-c -do `"$DoCommand`"" -NoNewWindow -PassThru -Wait
+    } else {
+        $Process = Start-Process -FilePath $VsimPath -ArgumentList "-c -do `"$DoCommand`"" -RedirectStandardOutput "vsim_run.log" -RedirectStandardError "vsim_err.log" -WindowStyle Hidden -PassThru -Wait
+    }
 
     # STEP 3: AUTOMATICALLY PARSE LOG TRANSCRIPT FOR ERRORS
     $Passed = $false
@@ -125,7 +131,7 @@ foreach ($t in $TestsToRun) {
     }
 
     if ($Passed) {
-        Write-Host "  -> RESULT: PASS (0 Errors, 0 SVA Failures)" -ForegroundColor Green
+        Write-Host "PASS" -ForegroundColor Green
         $Results += [PSCustomObject]@{
             TestName = $t
             Status   = "PASS"
@@ -134,7 +140,7 @@ foreach ($t in $TestsToRun) {
             SVA_Fail = $SvaFailures
         }
     } else {
-        Write-Host "  -> RESULT: FAIL (UVM Errors: $UvmErrors, Fatals: $UvmFatals, SVA Failures: $SvaFailures)" -ForegroundColor Red
+        Write-Host "FAIL" -ForegroundColor Red
         $OverallSuccess = $false
         $Results += [PSCustomObject]@{
             TestName = $t

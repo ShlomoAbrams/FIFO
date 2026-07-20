@@ -57,6 +57,16 @@ if {[info exists RCLK_HALF]} {
     append PLUSARGS " +RCLK_HALF=$RCLK_HALF"
 }
 
+# Append hardware Data Width generic if passed by runner (e.g., set DATA_WIDTH 16)
+if {[info exists DATA_WIDTH]} {
+    append PLUSARGS " -gDUT_DATA_WIDTH=$DATA_WIDTH"
+}
+
+# Append hardware Address Width generic if passed by runner (e.g., set ADDR_WIDTH 5)
+if {[info exists ADDR_WIDTH]} {
+    append PLUSARGS " -gDUT_ADDR_WIDTH=$ADDR_WIDTH"
+}
+
 # Launch vsim with resolution 1ps, full visibility (+acc), coverage enabled, and SVA assertions enabled
 eval vsim -t 1ps -voptargs="+acc" -coverage -assertdebug -onfinish stop \
      -L mtiUvm -sv_lib \$UVM_DPI work.fifo_top $PLUSARGS
