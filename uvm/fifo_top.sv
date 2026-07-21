@@ -107,7 +107,11 @@ module fifo_top #(
 	end
 
 	initial begin // UVM STARTUP & CONFIG DATABASE SETUP
-		uvm_config_db#(virtual fifo_if)::set(null, "*", "vif", p_if); // Publish virtual interface into UVM configuration database so driver, monitor, and scbd can retrieve it
+		// FACTORY REGISTRATION: Maps +UVM_TESTNAME string flags directly to specialized test classes matching DUT_DATA_WIDTH
+		typedef uvm_component_registry#(fifo_test#(DUT_DATA_WIDTH), "fifo_test") fifo_test_reg;
+		typedef uvm_component_registry#(fifo_reset_recovery_test#(DUT_DATA_WIDTH), "fifo_reset_recovery_test") fifo_reset_recovery_test_reg;
+
+		uvm_config_db#(virtual fifo_if #(.DATA_WIDTH(DUT_DATA_WIDTH)))::set(null, "*", "vif", p_if); // Publish virtual interface into UVM configuration database so driver, monitor, and scbd can retrieve it
 		run_test(); // Start UVM test specified by +UVM_TESTNAME flag
 	end
 endmodule

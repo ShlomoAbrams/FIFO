@@ -1,6 +1,6 @@
-class fifo_w_driver extends uvm_driver #(fifo_transaction); // Defines the "Write Worker" based on the UVM Driver template that handles "fifo_transaction" packets. 
-	`uvm_component_utils(fifo_w_driver) // FACTORY: Register the driver in the UVM library so it can be dynamically constructed.
-	virtual fifo_if vif; // The virtual interface is the software handle to the physical FIFO interface signals.
+class fifo_w_driver #(parameter DATA_WIDTH = 8) extends uvm_driver #(fifo_transaction#(DATA_WIDTH)); // Defines the "Write Worker" based on the UVM Driver template that handles "fifo_transaction" packets. 
+	`uvm_component_param_utils(fifo_w_driver#(DATA_WIDTH)) // FACTORY: Register the driver in the UVM library so it can be dynamically constructed.
+	virtual fifo_if #(DATA_WIDTH) vif; // The virtual interface is the software handle to the physical FIFO interface signals.
 
 	function new(string name, uvm_component parent); // CONSTRUCTOR: Creates the write driver component.
 		super.new(name, parent); // Establish component name and place in the testbench hierarchy.
@@ -8,14 +8,14 @@ class fifo_w_driver extends uvm_driver #(fifo_transaction); // Defines the "Writ
 
 	virtual function void build_phase(uvm_phase phase); // BUILD PHASE: Runs at Time 0 to fetch configuration data before simulation starts
 		super.build_phase(phase);
-		if(!uvm_config_db#(virtual fifo_if)::get(this, "","vif",vif)) begin 	// Reach into Database for the Virtual Interface
+		if(!uvm_config_db#(virtual fifo_if#(DATA_WIDTH))::get(this, "","vif",vif)) begin 	// Reach into Database for the Virtual Interface
 			`uvm_fatal("DRV", "Couldn't find virtual interface in config_db!")	// If "get" fails then there wasn't a Virtual Interface
 		end
 	endfunction
 
 	virtual task run_phase(uvm_phase phase); // WORK SHIFT: this task runs for the duration of the simulation
 		vif.w_d_cb.winc <= 1'b0; // Initialize to 0, so we don't write garbage to fifo in startup
-		vif.w_d_cb.wdata <= 8'h00; // Initialize to 0, so we write 0 as default value
+		vif.w_d_cb.wdata <= '0; // Initialize to 0, so we write 0 as default value
 		fork	
 			forever begin // Thread 1: Drive transactions when reset is not active
 				wait(vif.wrst_n === 1'b1); // Wait for reset to be released
@@ -31,7 +31,7 @@ class fifo_w_driver extends uvm_driver #(fifo_transaction); // Defines the "Writ
 					@(negedge vif.wrst_n);
 					`uvm_info("DRV", "Reset asserted, clearing outputs", UVM_LOW)
 					vif.w_d_cb.winc <= 1'b0; // Clear write enable.
-					vif.w_d_cb.wdata <= 8'h00; // Clear write data.
+					vif.w_d_cb.wdata <= '0; // Clear write data.
 					@(posedge vif.wrst_n);
 					`uvm_info("DRV", "Reset released, can write data", UVM_LOW)
 				end
@@ -39,7 +39,7 @@ class fifo_w_driver extends uvm_driver #(fifo_transaction); // Defines the "Writ
 		join
 	endtask
 
-	virtual task drive_item(fifo_transaction tr); // TRANSLATOR: Turns transaction fields into physical signal assertions.
+	virtual task drive_item(fifo_transaction#(DATA_WIDTH) tr); // TRANSLATOR: Turns transaction fields into physical signal assertions.
 		repeat (tr.delay) @(vif.w_d_cb); // STRESS TESTING: Wait for randomized delay to simulate varying traffic rates.
 		
 		if (tr.en) begin // if the transaction says "Write" drive winc & wdata

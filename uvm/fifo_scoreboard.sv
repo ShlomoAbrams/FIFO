@@ -1,13 +1,13 @@
 `uvm_analysis_imp_decl(_write)	// DECLARATION: The Implementation Port has two "Inboxes"
 `uvm_analysis_imp_decl(_read)	// Read Inbox
 
-class fifo_scoreboard extends uvm_scoreboard;	// BLUEPRINT: Defines the Scoreboard based on template.
-	`uvm_component_utils(fifo_scoreboard) 		// FACTORY: Register the Scoreboard in UVM library.
+class fifo_scoreboard #(parameter DATA_WIDTH = 8) extends uvm_scoreboard;	// BLUEPRINT: Defines the Scoreboard based on template.
+	`uvm_component_param_utils(fifo_scoreboard#(DATA_WIDTH)) 		// FACTORY: Register the Scoreboard in UVM library.
 
-	uvm_analysis_imp_write #(fifo_transaction, fifo_scoreboard) write_export; 	// Write inbox: transaction is handled by the Scoreboard.
-	uvm_analysis_imp_read #(fifo_transaction, fifo_scoreboard) read_export;		// Read inbox: transaction is handled by the Scoreboard.
-	logic [7:0] expected_queue[$];												// Queue to store data entering fifo_scoreboard.
-	virtual fifo_if vif;                                                        // Virtual interface to monitor reset signals.
+	uvm_analysis_imp_write #(fifo_transaction#(DATA_WIDTH), fifo_scoreboard#(DATA_WIDTH)) write_export; 	// Write inbox: transaction is handled by the Scoreboard.
+	uvm_analysis_imp_read #(fifo_transaction#(DATA_WIDTH), fifo_scoreboard#(DATA_WIDTH)) read_export;		// Read inbox: transaction is handled by the Scoreboard.
+	logic [DATA_WIDTH-1:0] expected_queue[$];												// Queue to store data entering fifo_scoreboard.
+	virtual fifo_if #(DATA_WIDTH) vif;                                                        // Virtual interface to monitor reset signals.
 
 	function new(string name, uvm_component parent);// CONSTRUCTOR: Builds the inbox exports.
 		super.new(name, parent);					// Establish component's name and place in hierarchy.
@@ -17,7 +17,7 @@ class fifo_scoreboard extends uvm_scoreboard;	// BLUEPRINT: Defines the Scoreboa
 
 	virtual function void build_phase(uvm_phase phase); // BUILD PHASE: Fetch configuration database information before simulation starts.
 		super.build_phase(phase);
-		if(!uvm_config_db#(virtual fifo_if)::get(this, "", "vif", vif)) begin // Fetch the virtual interface.
+		if(!uvm_config_db#(virtual fifo_if#(DATA_WIDTH))::get(this, "", "vif", vif)) begin // Fetch the virtual interface.
 			`uvm_fatal("SCBD", "Couldn't find virtual interface in config_db!")
 		end
 	endfunction
@@ -30,7 +30,7 @@ class fifo_scoreboard extends uvm_scoreboard;	// BLUEPRINT: Defines the Scoreboa
 		end
 	endtask
 	
-	virtual function void write_write(fifo_transaction tr);	// When Write Monitor calls ap.write() store data
+	virtual function void write_write(fifo_transaction#(DATA_WIDTH) tr);	// When Write Monitor calls ap.write() store data
 		if (vif.wrst_n === 1'b0) begin
 			return; // Ignore writes during reset.
 		end
@@ -39,8 +39,8 @@ class fifo_scoreboard extends uvm_scoreboard;	// BLUEPRINT: Defines the Scoreboa
 
 	endfunction
 	
-	virtual function void write_read(fifo_transaction tr);	// When Read Monitor calls ap.write() 
-		logic [7:0] expected_val; 							// stores data item exiting queue
+	virtual function void write_read(fifo_transaction#(DATA_WIDTH) tr);	// When Read Monitor calls ap.write() 
+		logic [DATA_WIDTH-1:0] expected_val; 							// stores data item exiting queue
 		if (vif.rrst_n === 1'b0) begin
 			return; // Ignore reads during reset.
 		end

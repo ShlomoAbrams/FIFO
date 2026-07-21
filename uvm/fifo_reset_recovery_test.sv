@@ -1,5 +1,5 @@
-class fifo_reset_recovery_test extends fifo_test; // BLUEPRINT: Test case focusing on verifying reset recovery behavior mid-traffic
-	`uvm_component_utils(fifo_reset_recovery_test) // FACTORY: Register the test case in UVM library so it can be dynamically spawned
+class fifo_reset_recovery_test #(parameter DATA_WIDTH = 8) extends fifo_test#(DATA_WIDTH); // BLUEPRINT: Test case focusing on verifying reset recovery behavior mid-traffic
+	`uvm_component_param_utils(fifo_reset_recovery_test#(DATA_WIDTH)) // FACTORY: Register the test case in UVM library so it can be dynamically spawned
 
 	function new(string name, uvm_component parent); // CONSTRUCTOR: Links the test component into the UVM hierarchy tree
 		super.new(name, parent);
@@ -7,16 +7,16 @@ class fifo_reset_recovery_test extends fifo_test; // BLUEPRINT: Test case focusi
 
 	virtual task run_phase(uvm_phase phase); // RUN PHASE: Main verification execution thread
 		// DECLARATIONS: Handles for pre-reset and post-reset transaction sequences
-		fifo_w_burst_sequence w_burst_stress_seq;		// Create Write Burst Sequence handles
-		fifo_r_drain_sequence r_drain_stress_seq;		// Create Read Drain Sequence handles
-		fifo_w_burst_sequence w_post_reset_seq;			// Create Write Burst Sequence handles
-		fifo_r_drain_sequence r_post_reset_seq;			// Create Read Drain Sequence handles
+		fifo_w_burst_sequence#(DATA_WIDTH) w_burst_stress_seq;		// Create Write Burst Sequence handles
+		fifo_r_drain_sequence#(DATA_WIDTH) r_drain_stress_seq;		// Create Read Drain Sequence handles
+		fifo_w_burst_sequence#(DATA_WIDTH) w_post_reset_seq;			// Create Write Burst Sequence handles
+		fifo_r_drain_sequence#(DATA_WIDTH) r_post_reset_seq;			// Create Read Drain Sequence handles
 
 		// COMPONENT CREATION: Spawn sequence instances using the UVM factory
-		w_burst_stress_seq = fifo_w_burst_sequence::type_id::create("w_burst_stress_seq");	// Create Write Burst Sequence
-		r_drain_stress_seq = fifo_r_drain_sequence::type_id::create("r_drain_stress_seq");	// Create Read Drain Sequence
-		w_post_reset_seq = fifo_w_burst_sequence::type_id::create("w_post_reset_seq");		// Create Write Burst Sequence
-		r_post_reset_seq = fifo_r_drain_sequence::type_id::create("r_post_reset_seq");		// Create Read Drain Sequence
+		w_burst_stress_seq = fifo_w_burst_sequence#(DATA_WIDTH)::type_id::create("w_burst_stress_seq");	// Create Write Burst Sequence
+		r_drain_stress_seq = fifo_r_drain_sequence#(DATA_WIDTH)::type_id::create("r_drain_stress_seq");	// Create Read Drain Sequence
+		w_post_reset_seq = fifo_w_burst_sequence#(DATA_WIDTH)::type_id::create("w_post_reset_seq");		// Create Write Burst Sequence
+		r_post_reset_seq = fifo_r_drain_sequence#(DATA_WIDTH)::type_id::create("r_post_reset_seq");		// Create Read Drain Sequence
 
 		phase.raise_objection(this); // RAISE OBJECTION: Keep simulation running for our verification flow
 		`uvm_info("RESET_TEST", "Starting FIFO Reset Recovery Test...", UVM_LOW) // Log the Starting of FIFO test

@@ -1,6 +1,6 @@
-class fifo_r_driver extends uvm_driver #(fifo_transaction); // Defines the "Read Worker" based on the UVM Driver template that handles "fifo_transaction" packets.
-	`uvm_component_utils(fifo_r_driver) // FACTORY: Register the driver in the UVM library so it can be dynamically constructed.
-	virtual fifo_if vif; // The virtual interface is the software handle to the physical FIFO interface signals.
+class fifo_r_driver #(parameter DATA_WIDTH = 8) extends uvm_driver #(fifo_transaction#(DATA_WIDTH)); // Defines the "Read Worker" based on the UVM Driver template that handles "fifo_transaction" packets.
+	`uvm_component_param_utils(fifo_r_driver#(DATA_WIDTH)) // FACTORY: Register the driver in the UVM library so it can be dynamically constructed.
+	virtual fifo_if #(DATA_WIDTH) vif; // The virtual interface is the software handle to the physical FIFO interface signals.
 
 	function new(string name, uvm_component parent); // CONSTRUCTOR: creates worker
 		super.new(name, parent); // establish components name and place in hierarchy 
@@ -8,7 +8,7 @@ class fifo_r_driver extends uvm_driver #(fifo_transaction); // Defines the "Read
 	
 	virtual function void build_phase(uvm_phase phase); // BUILD PHASE: Runs at Time 0 to fetch configuration data before simulation starts
 		super.build_phase(phase);
-		if(!uvm_config_db#(virtual fifo_if)::get(this, "", "vif", vif)) begin // Retrieve the Virtual Interface from the database.
+		if(!uvm_config_db#(virtual fifo_if#(DATA_WIDTH))::get(this, "", "vif", vif)) begin // Retrieve the Virtual Interface from the database.
 			`uvm_fatal("DRV", "Couldn't find virtual interface in config_db!") // Fatal error if the interface is missing.
 		end
 	endfunction
@@ -37,7 +37,7 @@ class fifo_r_driver extends uvm_driver #(fifo_transaction); // Defines the "Read
 		join
 	endtask
 
-	virtual task drive_item(fifo_transaction tr); // TRANSLATOR: Task that turns software into hardware reality.
+	virtual task drive_item(fifo_transaction#(DATA_WIDTH) tr); // TRANSLATOR: Task that turns software into hardware reality.
 		repeat (tr.delay) @(vif.r_d_cb); // STRESS TESTING: wait for randomized delay to simulate slow or fast traffic
 		
 		if (tr.en) begin // if the transaction says "read" drive rinc

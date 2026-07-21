@@ -1,0 +1,71 @@
+Coverage Report by instance with details
+
+=================================================================================
+=== Instance: /fifo_top/dut/sva_inst
+=== Design Unit: work.fifo_sva
+=================================================================================
+
+Assertion Coverage:
+    Assertions                      12        11         1    91.66%
+--------------------------------------------------------------------------------------------------------------------------------
+Name                 File(Line)                   Failure      Pass     Vacuous    Disable    Attempt     Active Peak Active ATV
+                                                  Count        Count    Count      Count      Count       Count  Count          
+--------------------------------------------------------------------------------------------------------------------------------
+/fifo_top/dut/sva_inst/assert__9
+                     ../uvm/fifo_sva.sv(144)            0         37         31          2         70          0           1 off
+/fifo_top/dut/sva_inst/assert__8
+                     ../uvm/fifo_sva.sv(138)            0         68        272         12        352          0           1 off
+/fifo_top/dut/sva_inst/assert__7
+                     ../uvm/fifo_sva.sv(132)            0         36        303         13        352          0           2 off
+/fifo_top/dut/sva_inst/assert__6
+                     ../uvm/fifo_sva.sv(126)            0         19         48          2         70          1           2 off
+/fifo_top/dut/sva_inst/assert__5
+                     ../uvm/fifo_sva.sv(120)            0         36         32          2         70          0           1 off
+/fifo_top/dut/sva_inst/assert__4
+                     ../uvm/fifo_sva.sv(114)            0         68        272         12        352          0           1 off
+/fifo_top/dut/sva_inst/assert__3
+                     ../uvm/fifo_sva.sv(108)            0          7         60          2         70          1           2 off
+/fifo_top/dut/sva_inst/assert__2
+                     ../uvm/fifo_sva.sv(102)            0          9        330         13        352          0           2 off
+/fifo_top/dut/sva_inst/assert__1
+                     ../uvm/fifo_sva.sv(96)             0          3         67          0         70          0           2 off
+/fifo_top/dut/sva_inst/assert__0
+                     ../uvm/fifo_sva.sv(91)             0         13        339          0        352          0           2 off
+/fifo_top/dut/sva_inst/assert_data_integrity
+                     ../uvm/fifo_sva.sv(168)            1         35         32          2         70          0           1 off
+/fifo_top/dut/sva_inst/assert_memory_management
+                     ../uvm/fifo_sva.sv(179)            0        340          0         12        352          0           1 off
+
+
+ASSERTION RESULTS:
+--------------------------------------------------------------------------------------------------------------------------------
+Name                 File(Line)                   Failure      Pass     Vacuous    Disable    Attempt     Active Peak Active ATV
+                                                  Count        Count    Count      Count      Count       Count  Count          
+--------------------------------------------------------------------------------------------------------------------------------
+/fifo_top/dut/sva_inst/assert__9
+                     ../uvm/fifo_sva.sv(144)            0         37         31          2         70          0           1 off
+/fifo_top/dut/sva_inst/assert__8
+                     ../uvm/fifo_sva.sv(138)            0         68        272         12        352          0           1 off
+/fifo_top/dut/sva_inst/assert__7
+                     ../uvm/fifo_sva.sv(132)            0         36        303         13        352          0           2 off
+/fifo_top/dut/sva_inst/assert__6
+                     ../uvm/fifo_sva.sv(126)            0         19         48          2         70          1           2 off
+/fifo_top/dut/sva_inst/assert__5
+                     ../uvm/fifo_sva.sv(120)            0         36         32          2         70          0           1 off
+/fifo_top/dut/sva_inst/assert__4
+                     ../uvm/fifo_sva.sv(114)            0         68        272         12        352          0           1 off
+/fifo_top/dut/sva_inst/assert__3
+                     ../uvm/fifo_sva.sv(108)            0          7         60          2         70          1           2 off
+/fifo_top/dut/sva_inst/assert__2
+                     ../uvm/fifo_sva.sv(102)            0          9        330         13        352          0           2 off
+/fifo_top/dut/sva_inst/assert__1
+                     ../uvm/fifo_sva.sv(96)             0          3         67          0         70          0           2 off
+/fifo_top/dut/sva_inst/assert__0
+                     ../uvm/fifo_sva.sv(91)             0         13        339          0        352          0           2 off
+/fifo_top/dut/sva_inst/assert_data_integrity
+                     ../uvm/fifo_sva.sv(168)            1         35         32          2         70          0           1 off
+/fifo_top/dut/sva_inst/assert_memory_management
+                     ../uvm/fifo_sva.sv(179)            0        340          0         12        352          0           1 off
+
+Total Coverage By Instance (filtered view): 91.66%
+

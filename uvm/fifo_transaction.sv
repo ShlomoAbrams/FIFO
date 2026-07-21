@@ -1,9 +1,9 @@
-class fifo_transaction extends uvm_sequence_item; // BLUEPRINT: defines fifo_transaction using UVM sequence item template
-	rand logic [7:0] data;	// CREATE VARIABLES: Transaction Data can be randomized
+class fifo_transaction #(parameter DATA_WIDTH = 8) extends uvm_sequence_item; // BLUEPRINT: defines fifo_transaction using UVM sequence item template
+	rand logic [DATA_WIDTH-1:0] data;	// CREATE VARIABLES: Transaction Data can be randomized
 	rand int delay;			// Clock cycles before driving Data
 	rand bit en;			// Is this a valid operation
 	
-	`uvm_object_utils_begin(fifo_transaction) // UVM MACROS: tells the UVM how to handle the variables
+	`uvm_object_param_utils_begin(fifo_transaction#(DATA_WIDTH)) // UVM MACROS: tells the UVM how to handle the variables
 		`uvm_field_int(data, UVM_ALL_ON)		// register variables, gives functions like compare() print() copy()
 		`uvm_field_int(delay, UVM_ALL_ON)
 		`uvm_field_int(en, UVM_ALL_ON)

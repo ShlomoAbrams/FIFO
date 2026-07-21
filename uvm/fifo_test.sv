@@ -1,7 +1,7 @@
-class fifo_test extends uvm_test; // BLUEPRINT: The Test Defines specific scenario for this run
-	`uvm_component_utils(fifo_test) // FACTORY: Register the Test so UVM can spawn it in the top file
-	fifo_env env; 			// DECLARATION: Handle for environment
-	virtual fifo_if p_if; 	// Handle for interface signals 
+class fifo_test #(parameter DATA_WIDTH = 8) extends uvm_test; // BLUEPRINT: The Test Defines specific scenario for this run
+	`uvm_component_param_utils(fifo_test#(DATA_WIDTH)) // FACTORY: Register the Test so UVM can spawn it in the top file
+	fifo_env#(DATA_WIDTH) env; 			// DECLARATION: Handle for environment
+	virtual fifo_if#(DATA_WIDTH) p_if; 	// Handle for interface signals 
 	
 	function new(string name, uvm_component parent); // CONSTRUCTOR: Links this component into the UVM hierarchy tree
 		super.new(name, parent);
@@ -9,24 +9,24 @@ class fifo_test extends uvm_test; // BLUEPRINT: The Test Defines specific scenar
 	
 	virtual function void build_phase(uvm_phase phase); 
 		super.build_phase(phase);
-		env = fifo_env::type_id::create("env", this); // COMPONENT CREATION: spawning environment using the factory
-		if(!uvm_config_db#(virtual fifo_if)::get(this, "", "vif", p_if)) begin // Retrieve the interface from database
+		env = fifo_env#(DATA_WIDTH)::type_id::create("env", this); // COMPONENT CREATION: spawning environment using the factory
+		if(!uvm_config_db#(virtual fifo_if#(DATA_WIDTH))::get(this, "", "vif", p_if)) begin // Retrieve the interface from database
 			`uvm_fatal("TEST", "Virtual interface not found in config_db")
 		end
 		uvm_top.set_timeout(1ms);			// The simulation cannot exceed this limit
 	endfunction
 	
 	virtual task run_phase(uvm_phase phase); // RUN PHASE:
-		fifo_w_sequence w_seq; 					// Create Write Sequence Handle
-		fifo_r_sequence r_seq;					// Create Read Sequence Handle
-		fifo_w_burst_sequence w_burst_seq, w_burst_stress_seq; 	// Create Write Burst Sequence handles
-		fifo_r_drain_sequence r_drain_seq, r_drain_stress_seq;	// Create Read Drain Sequence handles
-		w_seq = fifo_w_sequence::type_id::create("w_seq"); // Create Write Sequence
-		r_seq = fifo_r_sequence::type_id::create("r_seq"); // Create Read Sequence
-		w_burst_seq = fifo_w_burst_sequence::type_id::create("w_burst_seq"); // Create Write Burst Sequence
-		r_drain_seq = fifo_r_drain_sequence::type_id::create("r_drain_seq"); // Create Read Drain Sequence
-		w_burst_stress_seq = fifo_w_burst_sequence::type_id::create("w_burst_stress_seq"); // Create Write Burst Stress Sequence
-		r_drain_stress_seq = fifo_r_drain_sequence::type_id::create("r_drain_stress_seq"); // Create Read Drain Stress Sequence
+		fifo_w_sequence#(DATA_WIDTH) w_seq; 					// Create Write Sequence Handle
+		fifo_r_sequence#(DATA_WIDTH) r_seq;					// Create Read Sequence Handle
+		fifo_w_burst_sequence#(DATA_WIDTH) w_burst_seq, w_burst_stress_seq; 	// Create Write Burst Sequence handles
+		fifo_r_drain_sequence#(DATA_WIDTH) r_drain_seq, r_drain_stress_seq;	// Create Read Drain Sequence handles
+		w_seq = fifo_w_sequence#(DATA_WIDTH)::type_id::create("w_seq"); // Create Write Sequence
+		r_seq = fifo_r_sequence#(DATA_WIDTH)::type_id::create("r_seq"); // Create Read Sequence
+		w_burst_seq = fifo_w_burst_sequence#(DATA_WIDTH)::type_id::create("w_burst_seq"); // Create Write Burst Sequence
+		r_drain_seq = fifo_r_drain_sequence#(DATA_WIDTH)::type_id::create("r_drain_seq"); // Create Read Drain Sequence
+		w_burst_stress_seq = fifo_w_burst_sequence#(DATA_WIDTH)::type_id::create("w_burst_stress_seq"); // Create Write Burst Stress Sequence
+		r_drain_stress_seq = fifo_r_drain_sequence#(DATA_WIDTH)::type_id::create("r_drain_stress_seq"); // Create Read Drain Stress Sequence
 		
 		
 		phase.raise_objection(this);			// RAISE OBJECTION: Don't stop simulation
