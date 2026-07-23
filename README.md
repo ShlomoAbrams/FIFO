@@ -1,6 +1,30 @@
 # Asynchronous FIFO Design & UVM Verification Environment
 
-> Asynchronous FIFO implemented in VHDL and verified using a SystemVerilog UVM environment with constrained-random testing, assertions, scoreboarding, and functional coverage.
+> Parameterized Asynchronous FIFO implemented in VHDL and verified using a SystemVerilog UVM environment with constrained-random testing, assertions (SVA), scoreboarding, and functional coverage.
+
+![VHDL](https://img.shields.io/badge/RTL-VHDL--2008-blue.svg)
+![SystemVerilog](https://img.shields.io/badge/Verification-SystemVerilog-orange.svg)
+![UVM](https://img.shields.io/badge/Methodology-UVM--1.2-green.svg)
+![Simulator](https://img.shields.io/badge/Simulator-ModelSim%20%2F%20QuestaSim-purple.svg)
+
+---
+
+# Table of Contents
+- [Project Overview](#project-overview)
+- [Why Asynchronous FIFOs Matter](#why-asynchronous-fifos-matter)
+- [Project Structure](#project-structure)
+- [Quick Start: Automated Verification & Simulation](#quick-start-automated-verification--simulation)
+- [FIFO Architecture](#fifo-architecture)
+- [Clock Domain Crossing (CDC) & Pointer Synchronization](#clock-domain-crossing-cdc--pointer-synchronization)
+  - [1. Preventing Multi-Bit Skew Corruption (Gray Code)](#1-preventing-multi-bit-skew-corruption-gray-code)
+  - [2. Preventing Metastability (2-Stage FF Synchronizers)](#2-preventing-metastability-2-stage-ff-synchronizers)
+  - [Asynchronous CDC Latency & Flag Pessimism](#asynchronous-cdc-latency--flag-pessimism)
+- [Verification Environment](#verification-environment)
+- [Verification Strategy](#verification-strategy)
+- [SystemVerilog Assertions (SVA)](#systemverilog-assertions-sva)
+- [Functional & Structural Coverage](#functional--structural-coverage)
+- [Waveform Analysis & Simulation Traces](#waveform-analysis--simulation-traces)
+- [Author](#author)
 
 ---
 
@@ -9,18 +33,17 @@
 This project implements a parameterized asynchronous FIFO (First-In, First-Out) buffer designed for safe data transfer between independent clock domains.
 
 The design addresses critical clock-domain crossing (CDC) challenges including:
-- Metastability mitigation
-- Multi-bit synchronization
-- Gray-code pointer transfer
-- Reliable full/empty flag generation
-- Independent asynchronous read/write operation
+- Metastability mitigation via 2FF synchronizer chains
+- Multi-bit synchronization using Gray-code pointer transfer
+- Reliable full/empty flag generation with safe pessimistic latency
+- Independent asynchronous read and write domain operations
 
 The verification environment was developed using the Universal Verification Methodology (UVM) and includes:
 - Constrained-random stimulus generation
 - Assertion-based verification (SVA)
-- Functional coverage
+- Functional coverage with covergroups and crosses
 - Self-checking scoreboard architecture
-- Randomized asynchronous clock behavior
+- Randomized asynchronous clock period sweeps
 
 ---
 
@@ -29,16 +52,16 @@ The verification environment was developed using the Universal Verification Meth
 Asynchronous FIFOs are widely used in modern digital systems whenever data must safely cross between unrelated clock domains.
 
 Unlike synchronous FIFOs, asynchronous FIFOs must handle:
-- Unsynchronized clocks
-- Metastability risks
-- Safe pointer synchronization
+- Unsynchronized clocks with arbitrary frequency ratios
+- Metastability risks on asynchronous flip-flop setup/hold violations
+- Safe multi-bit pointer synchronization across boundaries
 - Correct status flag generation despite CDC latency
 
 To minimize synchronization errors, Gray-code pointers are used because only a single bit changes between adjacent values.
 
-Gray-code conversion used in the design:
+The Gray-code conversion used in the design:
 
-f_{gray}=b\oplus(b>>1)
+$$f_{\text{gray}} = b \oplus (b \gg 1)$$
 
 The synchronized Gray pointers are transferred across domains using a 2-stage flip-flop synchronizer chain.
 
@@ -50,39 +73,41 @@ The synchronized Gray pointers are transferred across domains using a 2-stage fl
 FIFO/
 │
 ├── rtl/                       # Synthesizable VHDL design files
-│   ├── fifo.vhd
-│   ├── fifo_mem.vhd
-│   ├── fifo_r_ptr.vhd
-│   ├── fifo_w_ptr.vhd
-│   └── fifo_synchronizer.vhd
+│   ├── fifo.vhd               # Top-level FIFO wrapper entity
+│   ├── fifo_mem.vhd           # Dual-port RAM array
+│   ├── fifo_r_ptr.vhd         # Read pointer & empty flag logic
+│   ├── fifo_w_ptr.vhd         # Write pointer & full flag logic
+│   └── fifo_synchronizer.vhd  # 2-Stage Flip-Flop (2FF) synchronizer
 │
 ├── uvm/                       # UVM verification environment
-│   ├── fifo_env.sv
-│   ├── fifo_if.sv
-│   ├── fifo_pkg.sv
-│   ├── fifo_r_agent.sv
+│   ├── fifo_env.sv            # Top UVM environment container
+│   ├── fifo_if.sv             # SystemVerilog interface with clocking blocks
+│   ├── fifo_pkg.sv            # Package importing UVM and components
+│   ├── fifo_r_agent.sv        # Read agent encapsulating driver, monitor, sequencer
 │   ├── fifo_r_drain_sequence.sv
-│   ├── fifo_r_driver.sv
-│   ├── fifo_r_monitor.sv
-│   ├── fifo_r_sequence.sv
+│   ├── fifo_r_driver.sv       # Read domain UVM driver
+│   ├── fifo_r_monitor.sv      # Read domain UVM monitor
+│   ├── fifo_r_sequence.sv     # Basic read sequence
 │   ├── fifo_reset_recovery_test.sv # Reset recovery stress test
-│   ├── fifo_scoreboard.sv
-│   ├── fifo_sva.sv
-│   ├── fifo_tb.sv             # Legacy SV testbench
-│   ├── fifo_test.sv           # Basic transaction & burst test
-│   ├── fifo_top.sv            # Testbench top module
-│   ├── fifo_transaction.sv
-│   ├── fifo_w_agent.sv
+│   ├── fifo_scoreboard.sv     # Self-checking data & flag scoreboard
+│   ├── fifo_sva.sv            # Concurrent SystemVerilog assertions
+│   ├── fifo_tb.sv             # Legacy SystemVerilog testbench
+│   ├── fifo_test.sv           # Base UVM test and transaction test
+│   ├── fifo_top.sv            # Top-level verification module
+│   ├── fifo_transaction.sv   # UVM sequence item definition
+│   ├── fifo_w_agent.sv        # Write agent encapsulating driver, monitor, sequencer
 │   ├── fifo_w_burst_sequence.sv
-│   ├── fifo_w_driver.sv
-│   ├── fifo_w_monitor.sv
-│   └── fifo_w_sequence.sv
+│   ├── fifo_w_driver.sv       # Write domain UVM driver
+│   ├── fifo_w_monitor.sv      # Write domain UVM monitor
+│   └── fifo_w_sequence.sv     # Basic write sequence
 │
 └── sim/
     ├── run.do                 # Parameterized ModelSim TCL simulation script
     ├── run.ps1                # Automated quiet PowerShell test runner script
     └── run.bat                # Windows Batch wrapper script (Quiet Mode)
 ```
+
+The VHDL design files can be found in [rtl/](file:///c:/Users/shlom/Documents/University/FIFO/rtl/) and the UVM verification suite in [uvm/](file:///c:/Users/shlom/Documents/University/FIFO/uvm/).
 
 ---
 
@@ -105,7 +130,7 @@ You can dynamically configure **all 4 simulation parameters** at runtime without
 
 1. Open terminal and navigate to your `sim` directory:
    ```bash
-   cd z:\FIFO\sim
+   cd sim
    ```
 2. Run simulation with default or custom parameters:
    ```bash
@@ -125,16 +150,17 @@ You can dynamically configure **all 4 simulation parameters** at runtime without
 
 1. Open ModelSim SE and navigate to your `sim` directory:
    ```bash
-   cd z:/FIFO/sim
+   cd sim
    ```
 2. Run simulation with default or custom parameters:
-   ```bash
+   ```tcl
    # 1. Run basic test (default settings)
    do run.do
 
    # 2. Custom Parameters Run
    set TESTNAME fifo_reset_recovery_test; set WCLK_HALF 2; set RCLK_HALF 10; set DATA_WIDTH 5; set ADDR_WIDTH 5; do run.do
    ```
+
 ---
 
 # FIFO Architecture
@@ -154,17 +180,90 @@ You can dynamically configure **all 4 simulation parameters** at runtime without
 
 ---
 
-# Pointer Synchronization
+# Clock Domain Crossing (CDC) & Pointer Synchronization
 
 ## Gray-Code Synchronization Path
 
 ![Gray Pointer Synchronization](docs/gray_sync.png)
 
 ### Synchronization Strategy
-- Binary pointers are converted to Gray-code
-- Gray pointers are synchronized across clock domains
-- 2-stage flip-flop synchronizers reduce metastability propagation risk
-- Full/empty flags are generated using synchronized pointers
+- Binary pointers are converted to Gray-code combinationally.
+- Gray pointers are transferred across independent clock domains via 2FF synchronizers.
+- Full and empty flags are generated by comparing local next Gray pointers against synchronized opposite Gray pointers.
+
+---
+
+## CDC Design Challenges & Mitigation
+
+Asynchronous clock domain crossings (CDC) pose two fundamental hardware challenges: **multi-bit pointer skew** and **metastability**. Below is a detailed breakdown of how this FIFO design mitigates both risks.
+
+### 1. Preventing Multi-Bit Skew Corruption (Gray Code)
+
+In a clock domain crossing, transferring multi-bit signals (such as binary-coded write/read pointers) is extremely dangerous due to **wire/routing skew** and differences in path delays.
+
+#### The Risk: Multi-Bit Binary Skew
+When a binary pointer increments, multiple bits can change simultaneously. For example, when a 3-bit binary pointer transitions from `3` (`011`) to `4` (`100`), all three bits must toggle.
+Due to physical delays and skew, these bit transitions will arrive at the receiving registers at slightly different times. If the destination clock samples the pointer during this transition window, it will capture a transient, corrupted value.
+
+| Current Binary State | Next Binary State | Potential Sampled Intermediate Values | Consequences |
+| :---: | :---: | :---: | :--- |
+| **`011`** (3) | **`100`** (4) | `111` (7), `000` (0), `001` (1), `101` (5), `110` (6), `010` (2) | **Severe logic failure**: Falsely triggering full/empty flags or indexing the wrong memory addresses. |
+
+#### The Mitigation: Gray Code Encoding
+To guarantee CDC safety, the write and read pointers are converted to **Gray Code** before crossing domains. In Gray code, adjacent values differ by **exactly one bit**.
+
+$$\text{Binary } 3 \rightarrow 4 \quad \Longleftrightarrow \quad \text{Gray } 010 \rightarrow 110$$
+
+Since only a single bit (the MSB) changes:
+- There are **no intermediate or transient states** to sample.
+- If the receiving clock samples the signal exactly during the transition, it will resolve to either the old value (`010`) or the new value (`110`).
+- Both values are valid pointer states. Capturing the old value simply delays flag assertion by a cycle (safe pessimism), but it **never corrupts** the FIFO logic.
+
+#### VHDL Implementation
+Binary-to-Gray conversion is performed combinationally on the next pointer values in [fifo_w_ptr.vhd](file:///c:/Users/shlom/Documents/University/FIFO/rtl/fifo_w_ptr.vhd) and [fifo_r_ptr.vhd](file:///c:/Users/shlom/Documents/University/FIFO/rtl/fifo_r_ptr.vhd):
+
+$$g_i = b_i \oplus b_{i+1}$$
+
+In VHDL, this is implemented as:
+```vhdl
+-- From fifo_w_ptr.vhd
+wptr_g_next <= std_logic_vector(wptr_b_next) xor ('0' & std_logic_vector(wptr_b_next(ADDR_WIDTH downto 1)));
+```
+
+---
+
+### 2. Preventing Metastability (2-Stage FF Synchronizers)
+
+Even with Gray-coded pointers, a single transitioning bit can still violate the setup and hold timing requirements of the receiving flip-flop, leading to **metastability**.
+
+#### The Risk: Setup/Hold Violations
+Flip-flops require that input signals remain stable during a critical window before and after the active clock edge. Since the write and read clocks are asynchronous, input transitions will inevitably occur inside this window, leaving the flip-flop's internal state in an unstable, intermediate voltage level (neither '0' nor '1') that can oscillate.
+
+##### Setup & Hold Violations:
+![Setup Time Violation](docs/Setup_Time.png)
+![Hold Time Violation](docs/Hold_Time.png)
+
+##### Latching Window (Before vs. After Clock Edge):
+![Before Edge](docs/Before_Edge.png)
+![After Edge](docs/After_Edge.png)
+
+#### The Mitigation: 2-Stage Flip-Flop (2FF) Synchronizers
+To prevent metastable states from propagating downstream and corrupting the system logic, this design synchronizes the Gray pointers using **2-Stage Flip-Flop Chains** implemented in [fifo_synchronizer.vhd](file:///c:/Users/shlom/Documents/University/FIFO/rtl/fifo_synchronizer.vhd).
+
+![2FF Synchronizer Architecture](docs/2FF_Syncronizer.png)
+
+1. **Stage 1 (Q1):** The raw asynchronous Gray-code pointer is sampled. If a setup/hold violation occurs, Q1 may go metastable.
+2. **Resolution Time ($t_r$):** The output of Q1 is given a full destination clock cycle to settle (decay) back to a stable '0' or '1' logic state.
+3. **Stage 2 (Q2):** The second flip-flop samples the now-stable output of Q1. Since the probability of Q1 remaining metastable for an entire clock period is extremely low, the output of Q2 (`q2ptr_g`) is guaranteed to be a clean, stable digital signal.
+
+#### Mean Time Between Failures (MTBF)
+The reliability of a synchronizer chain is quantified by its MTBF, which increases exponentially with the resolution time ($t_r$):
+
+$$\text{MTBF} = \frac{e^{s \cdot t_r}}{T_0 \cdot f_{clk} \cdot f_{data}}$$
+
+By adding the second flip-flop, we extend $t_r$ to nearly a full clock period ($T_{clk} - t_{su\_Q2}$), raising the MTBF from a few seconds to billions of years, ensuring robust silicon operation.
+
+---
 
 ### Asynchronous CDC Latency & Flag Pessimism
 Because pointers cross independent clock domains through a 2-stage flip-flop (2FF) synchronizer chain, there is a **2-cycle latency** before a pointer value is visible in the opposite clock domain. This latency introduces a safe, pessimistic bias in flag generation:
@@ -188,12 +287,12 @@ The testbench uses industry-standard UVM methodology:
 - **Scoreboard**: Compares expected vs. actual data with coverage metrics
 
 ### Verification Components
-- UVM driver
-- UVM monitor
-- UVM sequencer
-- Self-checking scoreboard
+- UVM driver ([fifo_w_driver.sv](file:///c:/Users/shlom/Documents/University/FIFO/uvm/fifo_w_driver.sv), [fifo_r_driver.sv](file:///c:/Users/shlom/Documents/University/FIFO/uvm/fifo_r_driver.sv))
+- UVM monitor ([fifo_w_monitor.sv](file:///c:/Users/shlom/Documents/University/FIFO/uvm/fifo_w_monitor.sv), [fifo_r_monitor.sv](file:///c:/Users/shlom/Documents/University/FIFO/uvm/fifo_r_monitor.sv))
+- UVM sequencer & sequences
+- Self-checking scoreboard ([fifo_scoreboard.sv](file:///c:/Users/shlom/Documents/University/FIFO/uvm/fifo_scoreboard.sv))
 - Functional coverage collector
-- SystemVerilog assertions
+- SystemVerilog assertions ([fifo_sva.sv](file:///c:/Users/shlom/Documents/University/FIFO/uvm/fifo_sva.sv))
 - Constrained-random stimulus generation
 
 ---
@@ -219,9 +318,9 @@ The DUT was verified using both directed and constrained-random testing methodol
 
 ---
 
-# Assertions (SVA)
+# SystemVerilog Assertions (SVA)
 
-The verification environment contains **12 concurrent and immediate SystemVerilog Assertions** to check the safety and correctness of the design protocol in real time:
+The verification environment contains **12 concurrent and immediate SystemVerilog Assertions** defined in [fifo_sva.sv](file:///c:/Users/shlom/Documents/University/FIFO/uvm/fifo_sva.sv) to check design rules in real time:
 
 1. **Write Domain Reset:** Asserts that when the write reset (`wrst_n`) is active, all write pointers (`waddr`, binary, Gray) and the `wfull` flag are correctly initialized to `0`.
 2. **Read Domain Reset:** Asserts that when the read reset (`rrst_n`) is active, all read pointers (`raddr`, binary, Gray) are initialized to `0` and `rempty` is asserted (`1`).
@@ -270,9 +369,9 @@ The verification plan defines **12 distinct coverpoints and crosses** (split bet
 | **Assertion Coverage** | SystemVerilog Assertions | ✅ Covered | 100% |
 | **RTL Code Coverage** | VHDL Design Units | ✅ Covered | 100% |
 
-* **Functional Coverage:** Proves the testbench successfully hit all defined design features and edge cases (e.g., full, empty, write while full).
-* **Assertion Coverage:** Confirms all safety checkers (SVA) protecting against overflow, underflow, and logic faults were active and passed.
-* **RTL Code Coverage (Structural):** Verifies the simulator executed every physical line, branch path, boolean expression, and signal toggle in the hardware code.
+- **Functional Coverage:** Proves the testbench successfully hit all defined design features and edge cases (e.g., full, empty, write while full).
+- **Assertion Coverage:** Confirms all safety checkers (SVA) protecting against overflow, underflow, and logic faults were active and passed.
+- **RTL Code Coverage (Structural):** Verifies the simulator executed every physical line, branch path, boolean expression, and signal toggle in the hardware code.
 
 ### ModelSim Coverage Dashboard
 ![Coverage Report Summary](docs/coverage.png)
@@ -282,50 +381,45 @@ The verification plan defines **12 distinct coverpoints and crosses** (split bet
 
 ---
 
-# Simulation Waveforms
-![Waveform Simulation](docs/Waveform_Simulation.png)
-# Waveforms Colors Match Diagram Signals
-![FIFO Block Diagram](docs/FIFO_Block_Diagram_Black.jpg)
+# Waveform Analysis & Simulation Traces
 
----
-## Read & Write Transactions 
-This waveform demonstrates standard FIFO data path operations. Data is written into the memory array (`wdata`) on the write clock domain when `winc` is asserted. It is subsequently read out (`rdata`) on the read clock domain in a First-In-First-Out sequence. The integrity of the data stream (e.g., `A7`, `5A`, `AF`) is preserved perfectly as it crosses the asynchronous boundary.
+Below are simulation waveform traces captured during ModelSim execution illustrating key FIFO behaviors. Signal color schemes match the [FIFO Top-Level Block Diagram](docs/FIFO_Block_Diagram_Black.jpg).
+
+![Waveform Overview](docs/Waveform_Simulation.png)
+
+### 1. Read & Write Data Transactions
+Data is written into memory (`wdata`) on the write clock domain when `winc` is asserted, and subsequently read out (`rdata`) on the read clock domain in First-In-First-Out order. The data pattern integrity (e.g., `A7`, `5A`, `AF`) is preserved cleanly as it crosses domains.
 
 ![Read & Write Waveform](docs/read_&_write_waveform.png)
 
-## FIFO Full Condition
-The FIFO asserts the full flag when the write pointer catches up to the synchronized read pointer. Because we are using Gray code across clock domains, the `wfull` condition is met when the pointers are equal, but the two Most Significant Bits (MSBs) are inverted.
+### 2. FIFO Full Condition
+The FIFO asserts `wfull` when the write pointer catches up to the synchronized read pointer. In Gray code, full occurs when pointers are equal with the two Most Significant Bits (MSBs) inverted.
 
 ![FIFO Full Waveform](docs/wfull_waveform.png)
 
----
-
-## FIFO Empty Condition
-The FIFO asserts the empty flag when the read pointer catches up to the synchronized write pointer. This occurs when all bits of the read pointer and the synchronized write pointer perfectly match.
+### 3. FIFO Empty Condition
+The FIFO asserts `rempty` when the read pointer catches up to the synchronized write pointer (all bits match).
 
 ![FIFO Empty Waveform](docs/rempty_waveform.png)
 
-## Clock Domain Crossing (CDC) Synchronization
+### 4. Clock Domain Crossing (CDC) Pointer Traces
 
-To safely pass the Gray-coded pointers between the independent read and write clock domains, the design utilizes 2-stage flip-flop synchronizers to mitigate metastability. 
+#### Read-to-Write Domain Synchronization
+The read Gray pointer crosses into the write domain through the 2FF synchronizer stages (`q1ptr_g` and `q2ptr_g`) before being evaluated for full condition check.
 
-### Read-to-Write Synchronization
-The read pointer crosses into the write domain. It is captured by the write clock (`wclk`) through two stages (`q1ptr_g` and `q2ptr_g`) before being evaluated for the full condition.
 ![Read to Write Sync](docs/r2w_sync_waveform.png)
+
+#### Write-to-Read Domain Synchronization
+The write Gray pointer crosses into the read domain through two flip-flop stages before empty condition evaluation.
+
+![Write to Read Sync](docs/w2r_sync_waveform.png)
 
 ---
 
-### Write-to-Read Synchronization
-The write pointer crosses into the read domain. It is captured by the read clock (`rclk`) through two stages before being evaluated for the empty condition.
-![Write to Read Sync](docs/w2r_sync_waveform.png)
-
-
 # Author
 
-Shlomo Abrams
-
+**Shlomo Abrams**  
 Electrical Engineering Student  
-Digital Design & Verification Enthusiast
+Digital Design & Verification Enthusiast  
 
-GitHub:
-https://github.com/ShlomoAbrams
+GitHub: [github.com/ShlomoAbrams](https://github.com/ShlomoAbrams)
