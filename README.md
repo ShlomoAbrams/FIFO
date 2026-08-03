@@ -1,6 +1,6 @@
 # Asynchronous FIFO Design & UVM Verification Environment
 
-> Parameterized Asynchronous FIFO implemented in VHDL and verified using a SystemVerilog UVM environment with constrained-random testing, assertions (SVA), scoreboarding, and functional coverage.
+
 
 ![VHDL](https://img.shields.io/badge/RTL-VHDL--2008-blue.svg)
 ![SystemVerilog](https://img.shields.io/badge/Verification-SystemVerilog-orange.svg)
@@ -39,7 +39,7 @@
 This project implements a parameterized dual-clock asynchronous FIFO in VHDL for safe data transfer across independent clock domains (CDC). The design is fully verified using a SystemVerilog UVM environment with SVA assertions and 100% coverage.
 
 ### Why Asynchronous FIFOs Matter
-Modern digital chips often operate different modules on completely independent clock frequencies. Asynchronous FIFOs serve as critical data bridges between these unrelated clock domains, ensuring fast and reliable data transfer without data loss or corruption.
+Modern digital chips operate different modules with independent clock frequencies. Asynchronous FIFOs serve as critical data bridges between these clock domains, ensuring fast and reliable data transfer without data loss or corruption.
 
 ### Project Directory Structure
 
@@ -108,83 +108,98 @@ Asynchronous clock domain crossings (CDC) pose two fundamental hardware challeng
 
 ## Gray-Code Synchronization Path
 
-![Gray Pointer Synchronization](docs/gray_sync.png)
+![Gray Pointer Synchronization](docs/Gray_Pointer_Syncronizer.jpeg)
 
 ---
 
-### 1. Preventing Multi-Bit Skew Corruption (Gray Code Encoding)
-
-In a clock domain crossing, transferring multi-bit signals (such as binary-coded write/read pointers) is extremely dangerous due to **wire/routing skew** and differences in path delays.
+### 3.1 Preventing Multi-Bit Skew Corruption (Gray Code Encoding)
 
 #### The Risk: Multi-Bit Binary Skew
-When a binary pointer increments, multiple bits can change simultaneously. For example, when a 3-bit binary pointer transitions from `3` (`011`) to `4` (`100`), all three bits must toggle.
-Due to physical delays and skew, these bit transitions will arrive at the receiving registers at slightly different times. If the destination clock samples the pointer during this transition window, it will capture a transient, corrupted value.
+In a clock domain crossing, transferring multi-bit pointers is dangerous due to **wire/routing skew** and differences in path delays.
 
-| Current Binary State | Next Binary State | Potential Sampled Intermediate Values | Consequences |
-| :---: | :---: | :---: | :--- |
-| **`011`** (3) | **`100`** (4) | `111` (7), `000` (0), `001` (1), `101` (5), `110` (6), `010` (2) | **Severe logic failure**: Falsely triggering full/empty flags or indexing the wrong memory addresses. |
+When a binary pointer increments, multiple bits often change simultaneously. For example, when a 3-bit binary pointer transitions from `3` (`011`) to `4` (`100`), all three bits must toggle.
+Due to routing skew, these bit transitions arrive at destination flip-flops at slightly different times. If the destination clock samples the pointer mid-transition, it can capture arbitrary intermediate corrupted values, leading to false full/empty flag assertions or corrupted pointer logic.
+
+| Current Binary State | Next Binary State | Sampled Intermediate Values |
+| :---: | :---: | :---: |
+| **`011`** (3) | **`100`** (4) | `111` (7), `000` (0), `001` (1), `101` (5), `110` (6), `010` (2) |
 
 #### The Mitigation: Gray Code Encoding
-To guarantee CDC safety, the write and read pointers are converted to **Gray Code** before crossing domains. In Gray code, adjacent values differ by **exactly one bit**.
+To guarantee CDC safety, pointer values are converted to **Gray Code** prior to domain crossing. In Gray code, consecutive numerical values differ by **exactly one bit**.
 
 $$\text{Binary } 3 \rightarrow 4 \quad \Longleftrightarrow \quad \text{Gray } 010 \rightarrow 110$$
 
-Since only a single bit (the MSB) changes:
-- There are **no intermediate or transient states** to sample.
-- If the receiving clock samples the signal exactly during the transition, it will resolve to either the old value (`010`) or the new value (`110`).
-- Both values are valid pointer states. Capturing the old value simply delays flag assertion by a cycle (safe pessimism), but it **never corrupts** the FIFO logic.
+Since only a single bit toggles during pointer increment:
+- There are **no multi-bit intermediate or transient states** to sample.
+- If the receiving clock samples the signal precisely during a bit transition, the sampled result will resolve to either the **previous state** (`010`) or the **new state** (`110`).
+- Both are valid, coherent pointer states. Sampling the old value simply delays flag assertion by one destination clock cycle (safe pessimism) without corrupting memory management logic.
 
-#### VHDL Implementation
-Binary-to-Gray conversion is performed combinationally on the next pointer values:
+#### Implementation
+Binary-to-Gray conversion is performed on the next pointer values:
 
 $$f_{\text{gray}} = b \oplus (b \gg 1)$$
 
-In VHDL ([fifo_w_ptr.vhd](file:///c:/Users/shlom/Documents/University/FIFO/rtl/fifo_w_ptr.vhd) and [fifo_r_ptr.vhd](file:///c:/Users/shlom/Documents/University/FIFO/rtl/fifo_r_ptr.vhd)):
-```vhdl
--- From fifo_w_ptr.vhd
-wptr_g_next <= std_logic_vector(wptr_b_next) xor ('0' & std_logic_vector(wptr_b_next(ADDR_WIDTH downto 1)));
-```
-
 ---
 
-### 2. Preventing Metastability (2-Stage FF Synchronizers)
+### 3.2 Preventing Metastability (2-Stage Flip-Flop Synchronizers)
 
-Even with Gray-coded pointers, a single transitioning bit can still violate the setup and hold timing requirements of the receiving flip-flop, leading to **metastability**.
+Even with Gray-coded pointers, a single transitioning bit can still violate the setup or hold timing requirements of the receiving flip-flop, leading to **metastability**.
 
 #### The Risk: Setup/Hold Violations
-Flip-flops require that input signals remain stable during a critical window before and after the active clock edge. Since the write and read clocks are asynchronous, input transitions will inevitably occur inside this window, leaving the flip-flop's internal state in an unstable, intermediate voltage level (neither '0' nor '1') that can oscillate.
+Flip-flops require input signals to remain stable during a setup and hold window around the active clock edge. Asynchronous clocks render these violations inevitable, leaving internal latch nodes at an unstable intermediate voltage state (near $V_{DD}/2$) that can cause output oscillations.
+
+#### Circuit-Level D-to-Q Latch Analysis
+
+##### 1. Before Clock Edge:
+![Before Edge](docs/Before_Edge.png)
+Before the rising edge, input $D$ is latched on node $X$.
+
+##### 2. After Clock Edge:
+![After Edge](docs/After_Edge.png)
+After the rising edge, node $X$ is transferred to the output $Q$.
+
+##### The Metastable State:
+![Metastable State](docs/Metastable_State.jpeg)
+A metastable state occurs if node X and node Y end up with conflicting voltage levels post-edge. Node X drives node Y through Transmission Gate 2 (with delay), while node Y drives node X back through the dual-inverter feedback path. Because their states conflict, both nodes get trapped at an intermediate voltage level (near $V_{DD}/2$) operating in their linear high-gain region, causing output $Q$ to remain metastable until the loop resolves.
 
 ##### Setup & Hold Violations:
-![Setup Time Violation](docs/Setup_Time.png)
-![Hold Time Violation](docs/Hold_Time.png)
+![Setup Time Violation](docs/Setup_Time.jpeg)
+**Setup Violation:** Occurs if input $D$ changes too late before the clock edge. $D$ reaches node $Y$ but fails to propagate to node $X$ before sampling, causing node $X$ to retain its previous state different from the new $D$ value.
 
-##### Latching Window (Before vs. After Clock Edge):
-![Before Edge](docs/Before_Edge.png)
-![After Edge](docs/After_Edge.png)
+![Hold Time Violation](docs/Hold_Time.jpeg)
+**Hold Violation:** Occurs if input $D$ changes after the clock edge before Transmission Gate 1 completely isolates the input stage, altering node $Y$ and mismatching the latched value at node $X$.
 
-#### The Mitigation: 2-Stage Flip-Flop (2FF) Synchronizers
-To prevent metastable states from propagating downstream and corrupting the system logic, this design synchronizes the Gray pointers using **2-Stage Flip-Flop Chains** implemented in [fifo_synchronizer.vhd](file:///c:/Users/shlom/Documents/University/FIFO/rtl/fifo_synchronizer.vhd).
+#### The Mitigation: 2-Stage Flip-Flop (2FF) Synchronizer Chains
+To prevent metastable outputs from propagating into internal control logic, Gray-coded pointers pass through **2-Stage Flip-Flop (2FF) Chains** in the destination domain.
 
 ![2FF Synchronizer Architecture](docs/2FF_Syncronizer.png)
 
-1. **Stage 1 (Q1):** The raw asynchronous Gray-code pointer is sampled. If a setup/hold violation occurs, Q1 may go metastable.
-2. **Resolution Time ($t_r$):** The output of Q1 is given a full destination clock cycle to settle (decay) back to a stable '0' or '1' logic state.
-3. **Stage 2 (Q2):** The second flip-flop samples the now-stable output of Q1. Since the probability of Q1 remaining metastable for an entire clock period is extremely low, the output of Q2 (`q2ptr_g`) is guaranteed to be a clean, stable digital signal.
+1. **Stage 1 ($Q_1$):** Samples the raw asynchronous Gray pointer. If a setup/hold violation occurs, $Q_1$ may enter a metastable state.
+2. **Resolution Window ($t_r$):** $Q_1$ is granted a full destination clock cycle for its internal node voltages to decay to a deterministic digital '0' or '1'.
+3. **Stage 2 ($Q_2$):** Samples the settled output of $Q_1$. Because the probability of $Q_1$ remaining metastable for a full clock cycle is exponentially tiny, $Q_2$ (`q2ptr_g`) yields a clean, synchronized logic signal.
 
 #### Mean Time Between Failures (MTBF)
 The reliability of a synchronizer chain is quantified by its MTBF, which increases exponentially with the resolution time ($t_r$):
 
-$$\text{MTBF} = \frac{e^{s \cdot t_r}}{T_0 \cdot f_{clk} \cdot f_{data}}$$
+$$\text{MTBF} = \frac{e^{s \cdot t_r}}{T_0 \cdot f_{\text{clk}} \cdot f_{\text{data}}}$$
 
-By adding the second flip-flop, we extend $t_r$ to nearly a full clock period ($T_{clk} - t_{su\_Q2}$), raising the MTBF from a few seconds to billions of years, ensuring robust silicon operation.
+Where:
+- $t_r$: Available settling time ($T_{\text{clk}} - t_{su}$)
+- $s$: Resolution time constant of the flip-flop process node
+- $T_0$: Deep-metastability aperture factor
+- $f_{\text{clk}}$: Destination clock frequency
+- $f_{\text{data}}$: Frequency of incoming Gray pointer bit toggles
+
+The insertion of $Q_2$ expands $t_r$ by nearly an entire clock period, boosting MTBF from seconds to millions of operational years.
 
 ---
 
-### 3. Asynchronous CDC Latency & Flag Pessimism
+### 3.3 Asynchronous CDC Latency & Flag Pessimism
 
-Because pointers cross independent clock domains through a 2-stage flip-flop (2FF) synchronizer chain, there is a **2-cycle latency** before a pointer value is visible in the opposite clock domain. This latency introduces a safe, pessimistic bias in flag generation:
-- **`wfull` Pessimism:** The write pointer is compared against a read pointer that is 2 cycles old. The write side may see the FIFO as "Full" slightly earlier than it physically is. This is structurally safe because it guarantees no data is overwritten (overflow).
-- **`rempty` Pessimism:** The read pointer is compared against a write pointer that is 2 cycles old. The read side may see the FIFO as "Empty" slightly earlier than it physically is. This is structurally safe because it guarantees no stale or garbage data is read (underflow).
+Passing pointers across asynchronous clock domains via 2FF synchronizers introduces a **2 clock cycle synchronization latency**. This latency introduces a structural, pessimistic bias into flag generation:
+
+- **`wfull` Pessimism:** The write pointer is compared to the read pointer that is 2 write-clock cycles old. The write domain may perceive the FIFO as "Full" slightly before it physically is (if reads occurred during synchronization). This bias is **completely safe**—it strictly prevents memory overflow/data corruption, though it temporarily restricts write throughput until synchronization completes.
+- **`rempty` Pessimism:** The read pointer is compared to the write pointer that is 2 read-clock cycles old. The read domain may perceive the FIFO as "Empty" slightly before it physically is (if writes occurred during synchronization). This bias is **completely safe**—it strictly prevents underflow/reading garbage data, ensuring strong data integrity across domains.
 
 ---
 
@@ -221,7 +236,7 @@ The testbench uses industry-standard UVM methodology:
 
 ## SystemVerilog Assertions (SVA - 12 Safety Checkers)
 
-The verification environment contains **12 concurrent and immediate SystemVerilog Assertions** defined in [fifo_sva.sv](file:///c:/Users/shlom/Documents/University/FIFO/uvm/fifo_sva.sv) to check design rules in real time:
+The verification environment contains **12 concurrent and immediate SystemVerilog Assertions** to check the safety and correctness of the design protocol in real time:
 
 1. **Write Domain Reset:** Asserts that when the write reset (`wrst_n`) is active, all write pointers (`waddr`, binary, Gray) and the `wfull` flag are correctly initialized to `0`.
 2. **Read Domain Reset:** Asserts that when the read reset (`rrst_n`) is active, all read pointers (`raddr`, binary, Gray) are initialized to `0` and `rempty` is asserted (`1`).
@@ -242,7 +257,27 @@ The verification environment contains **12 concurrent and immediate SystemVerilo
 
 The verification environment combines **Structural Code Coverage** on the RTL design units with **Functional and Assertion Coverage** defined via SystemVerilog covergroups and SVA.
 
-### Coverage Results
+## Coverage Goals & Coverpoints
+
+The verification plan defines **12 distinct coverpoints and crosses** (split between the write-side and read-side covergroups) to verify correct operation across all FIFO scenarios:
+
+### Write-Side Covergroup (`fifo_w_cg`)
+1. **`wfull`**: Coverage of the FIFO Full flag states (Asserted vs. Deasserted).
+2. **`w_occupancy`**: Tracks write-side occupancy levels (`empty`, `almost_empty`, `mid_range`, `almost_full`, `full`).
+3. **`winc`**: Verifies write command request activation.
+4. **`wrst_n`**: Verifies write domain reset states.
+5. **Cross `winc` × `wfull`**: Proves write attempts are simulated under both Full and Non-Full conditions (tests overflow protection).
+6. **Cross `winc` × `w_occupancy`**: Proves write requests are executed at every possible FIFO fill level.
+
+### Read-Side Covergroup (`fifo_r_cg`)
+7. **`rempty`**: Coverage of the FIFO Empty flag states (Asserted vs. Deasserted).
+8. **`r_occupancy`**: Tracks read-side occupancy levels (`empty`, `almost_empty`, `mid_range`, `almost_full`, `full`).
+9. **`rinc`**: Verifies read command request activation.
+10. **`rrst_n`**: Verifies read domain reset states.
+11. **Cross `rinc` × `rempty`**: Proves read attempts are simulated under both Empty and Non-Empty conditions (tests underflow protection).
+12. **Cross `rinc` × `r_occupancy`**: Proves read requests are executed at every possible FIFO fill level.
+
+## Coverage Results
 
 | Coverage Type | Target | Status | Result |
 |---|---|---|---|
@@ -263,15 +298,13 @@ The verification environment combines **Structural Code Coverage** on the RTL de
 ---
 
 # 5. Waveform Analysis & Simulation Guide
+![Waveform Simulation](docs/Waveform_Simulation.png)
+# Waveforms Colors Match Diagram Signals
+![FIFO Block Diagram](docs/FIFO_Block_Diagram_Black.jpg)
 
-## Simulation Waveform Traces
-
-Below are simulation waveform traces captured during ModelSim execution illustrating key FIFO behaviors. Signal color schemes match the [FIFO Top-Level Block Diagram](docs/FIFO_Block_Diagram_Black.jpg).
-
-![Waveform Overview](docs/Waveform_Simulation.png)
-
-### 1. Read & Write Data Transactions
-Data is written into memory (`wdata`) on the write clock domain when `winc` is asserted, and subsequently read out (`rdata`) on the read clock domain in First-In-First-Out order. The data pattern integrity (e.g., `A7`, `5A`, `AF`) is preserved cleanly as it crosses domains.
+---
+## Read & Write Transactions 
+This waveform demonstrates standard FIFO data path operations. Data is written into the memory array (`wdata`) on the write clock domain when `winc` is asserted. It is subsequently read out (`rdata`) on the read clock domain in a First-In-First-Out sequence. The integrity of the data stream (e.g., `A7`, `5A`, `AF`) is preserved perfectly as it crosses the asynchronous boundary.
 
 ![Read & Write Waveform](docs/read_&_write_waveform.png)
 
