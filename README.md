@@ -17,10 +17,10 @@
 - [2. FIFO Architecture & Functionality](#2-fifo-architecture--functionality)
   - [Top-Level Architecture](#top-level-architecture)
   - [How the FIFO Works](#how-the-fifo-works)
-- [3. Clock Domain Crossing (CDC) Mitigation](#3-clock-domain-crossing-cdc-mitigation)
-  - [1. Preventing Multi-Bit Skew Corruption (Gray Code Encoding)](#1-preventing-multi-bit-skew-corruption-gray-code-encoding)
-  - [2. Preventing Metastability (2-Stage FF Synchronizers)](#2-preventing-metastability-2-stage-ff-synchronizers)
-  - [3. Asynchronous CDC Latency & Flag Pessimism](#3-asynchronous-cdc-latency--flag-pessimism)
+- [3. Clock Domain Crossing (CDC) & Synchronization Architecture](#3-clock-domain-crossing-cdc--synchronization-architecture)
+  - [3.1 Gray Code Encoding](#31-gray-code-encoding)
+  - [3.2 Preventing Metastability (Synchronizers)](#32-preventing-metastability-synchronizers)
+  - [3.3 Synchronization Latency & Safe Flag Pessimism](#33-synchronization-latency--safe-flag-pessimism)
 - [4. Verification Environment (UVM & SVA)](#4-verification-environment-uvm--sva)
   - [UVM Testbench Architecture](#uvm-testbench-architecture)
   - [Verification Trace Matrix (Features Verified)](#verification-trace-matrix-features-verified)
@@ -102,29 +102,26 @@ An asynchronous FIFO acts as a temporary queue for transferring data between two
 
 ---
 
-# 3. Clock Domain Crossing (CDC) Mitigation
+# 3. Clock Domain Crossing (CDC) & Synchronization Architecture
 
 Asynchronous clock domain crossings (CDC) pose two fundamental hardware challenges: **multi-bit pointer skew** and **metastability**. Below is a detailed breakdown of how this FIFO design mitigates both risks.
-
-## Gray-Code Synchronization Path
 
 ![Gray Pointer Synchronization](docs/Gray_Pointer_Syncronizer.jpeg)
 
 ---
 
-### 3.1 Preventing Multi-Bit Skew Corruption (Gray Code Encoding)
+## 3.1 Gray Code Encoding
 
-#### The Risk: Multi-Bit Binary Skew
+### Problem: Multi-Bit Skew Corruption
 In a clock domain crossing, transferring multi-bit pointers is dangerous due to **wire/routing skew** and differences in path delays.
 
-When a binary pointer increments, multiple bits often change simultaneously. For example, when a 3-bit binary pointer transitions from `3` (`011`) to `4` (`100`), all three bits must toggle.
-Due to routing skew, these bit transitions arrive at destination flip-flops at slightly different times. If the destination clock samples the pointer mid-transition, it can capture arbitrary intermediate corrupted values, leading to false full/empty flag assertions or corrupted pointer logic.
+When a binary pointer increments, multiple bits often change simultaneously. For example, when a 3-bit binary pointer transitions from `3` (`011`) to `4` (`100`), all three bits must toggle. Due to routing skew, these bit transitions arrive at destination flip-flops at slightly different times. If the destination clock samples the pointer mid-transition, it can capture arbitrary intermediate corrupted values, leading to false full/empty flag assertions or corrupted pointer logic.
 
 | Current Binary State | Next Binary State | Sampled Intermediate Values |
 | :---: | :---: | :---: |
 | **`011`** (3) | **`100`** (4) | `111` (7), `000` (0), `001` (1), `101` (5), `110` (6), `010` (2) |
 
-#### The Mitigation: Gray Code Encoding
+### Solution: Single-Bit Toggle (Gray Code)
 To guarantee CDC safety, pointer values are converted to **Gray Code** prior to domain crossing. In Gray code, consecutive numerical values differ by **exactly one bit**.
 
 $$\text{Binary } 3 \rightarrow 4 \quad \Longleftrightarrow \quad \text{Gray } 010 \rightarrow 110$$
@@ -134,67 +131,64 @@ Since only a single bit toggles during pointer increment:
 - If the receiving clock samples the signal precisely during a bit transition, the sampled result will resolve to either the **previous state** (`010`) or the **new state** (`110`).
 - Both are valid, coherent pointer states. Sampling the old value simply delays flag assertion by one destination clock cycle (safe pessimism) without corrupting memory management logic.
 
-#### Implementation
-Binary-to-Gray conversion is performed on the next pointer values:
+### Implementation: Binary-to-Gray Converter
 
-$$f_{\text{gray}} = b \oplus (b \gg 1)$$
+$$G = B \oplus (B \gg 1)$$
 
 ---
 
-### 3.2 Preventing Metastability (2-Stage Flip-Flop Synchronizers)
+## 3.2 Preventing Metastability (Synchronizers)
 
+### Problem: Setup/Hold Timing Violations
 Even with Gray-coded pointers, a single transitioning bit can still violate the setup or hold timing requirements of the receiving flip-flop, leading to **metastability**.
 
-#### The Risk: Setup/Hold Violations
-Flip-flops require input signals to remain stable during a setup and hold window around the active clock edge. Asynchronous clocks render these violations inevitable, leaving internal latch nodes at an unstable intermediate voltage state (near $V_{DD}/2$) that can cause output oscillations.
+Flip-flops require input signals to remain stable during a setup and hold window around the active clock edge. Asynchronous clocks render these violations inevitable, leaving internal latch nodes at an unstable intermediate voltage state ($V_{DD}/2$) that can cause output oscillations.
 
-#### Circuit-Level D-to-Q Latch Analysis
+#### How Metastability Occurs (Internal Flip-Flop Dynamics)
 
-##### 1. Before Clock Edge:
-![Before Edge](docs/Before_Edge.png)
-Before the rising edge, input $D$ is latched on node $X$.
+* **1. Before Clock Edge:** Input $D$ is latched on node $X$.  
+  ![Before Edge](docs/Before_Edge.png)
 
-##### 2. After Clock Edge:
-![After Edge](docs/After_Edge.png)
-After the rising edge, node $X$ is transferred to the output $Q$.
+* **2. After Clock Edge:** Node $X$ is transferred to output $Q$.  
+  ![After Edge](docs/After_Edge.png)
 
-##### The Metastable State:
-![Metastable State](docs/Metastable_State.jpeg)
-A metastable state occurs if node X and node Y end up with conflicting voltage levels post-edge. Node X drives node Y through Transmission Gate 2 (with delay), while node Y drives node X back through the dual-inverter feedback path. Because their states conflict, both nodes get trapped at an intermediate voltage level (near $V_{DD}/2$) operating in their linear high-gain region, causing output $Q$ to remain metastable until the loop resolves.
+* **3. The Metastable State:** Node X and node Y end up with conflicting voltage levels post-edge. Node X drives node Y through Transmission Gate 2 (with delay), while node Y drives node X back through the dual-inverter feedback path. Because their states conflict, both nodes get trapped at an intermediate voltage level ($V_{DD}/2$), causing output $Q$ to remain metastable until noise resolves the loop.  
+  ![Metastable State](docs/Metastable_State.jpeg)
 
-##### Setup & Hold Violations:
-![Setup Time Violation](docs/Setup_Time.jpeg)
-**Setup Violation:** Occurs if input $D$ changes too late before the clock edge. $D$ reaches node $Y$ but fails to propagate to node $X$ before sampling, causing node $X$ to retain its previous state different from the new $D$ value.
+* **4. Setup Violation:** Occurs if input $D$ changes too late before the clock edge, failing to reach node $X$ before sampling. Node $X$ retains its previous value.  
+  ![Setup Time Violation](docs/Setup_Time.jpeg)
 
-![Hold Time Violation](docs/Hold_Time.jpeg)
-**Hold Violation:** Occurs if input $D$ changes after the clock edge before Transmission Gate 1 completely isolates the input stage, altering node $Y$ and mismatching the latched value at node $X$.
+* **5. Hold Violation:** Occurs if input $D$ changes after the clock edge before Transmission Gate 1 completely isolates the input stage, altering node $Y$ and mismatching latched node $X$.  
+  ![Hold Time Violation](docs/Hold_Time.jpeg)
 
-#### The Mitigation: 2-Stage Flip-Flop (2FF) Synchronizer Chains
+---
+
+### Solution: 2-Stage Flip-Flop Resolution Window
 To prevent metastable outputs from propagating into internal control logic, Gray-coded pointers pass through **2-Stage Flip-Flop (2FF) Chains** in the destination domain.
 
-![2FF Synchronizer Architecture](docs/2FF_Syncronizer.png)
+![2FF Synchronizer Architecture](docs/Gray_Pointer_Syncronizer.jpeg)
 
-1. **Stage 1 ($Q_1$):** Samples the raw asynchronous Gray pointer. If a setup/hold violation occurs, $Q_1$ may enter a metastable state.
+1. **Stage 1 ($Q_1$):** Samples the raw asynchronous Gray pointer. If a setup/hold violation occurs, $Q_1$ may become metastable.
 2. **Resolution Window ($t_r$):** $Q_1$ is granted a full destination clock cycle for its internal node voltages to decay to a deterministic digital '0' or '1'.
-3. **Stage 2 ($Q_2$):** Samples the settled output of $Q_1$. Because the probability of $Q_1$ remaining metastable for a full clock cycle is exponentially tiny, $Q_2$ (`q2ptr_g`) yields a clean, synchronized logic signal.
+3. **Stage 2 ($Q_2$):** Samples the settled output of $Q_1$. Because the probability of $Q_1$ remaining metastable for a full clock cycle is exponentially low, $Q_2$ creates a clean, synchronized signal.
 
 #### Mean Time Between Failures (MTBF)
 The reliability of a synchronizer chain is quantified by its MTBF, which increases exponentially with the resolution time ($t_r$):
 
 $$\text{MTBF} = \frac{e^{s \cdot t_r}}{T_0 \cdot f_{\text{clk}} \cdot f_{\text{data}}}$$
 
-Where:
-- $t_r$: Available settling time ($T_{\text{clk}} - t_{su}$)
-- $s$: Resolution time constant of the flip-flop process node
-- $T_0$: Deep-metastability aperture factor
-- $f_{\text{clk}}$: Destination clock frequency
-- $f_{\text{data}}$: Frequency of incoming Gray pointer bit toggles
+| Parameter | Description |
+| :--- | :--- |
+| **$t_r$** | Available settling time ($T_{\text{clk}} - t_{su}$) |
+| **$s$** | Resolution time constant of the process node |
+| **$T_0$** | Deep-metastability aperture factor |
+| **$f_{\text{clk}}$ / $f_{\text{data}}$** | Destination clock frequency and incoming Gray pointer toggle rate |
 
-The insertion of $Q_2$ expands $t_r$ by nearly an entire clock period, boosting MTBF from seconds to millions of operational years.
+The insertion of $Q_2$ expands $t_r$ by nearly an entire clock period, which can boost MTBF from seconds to years.
 
 ---
 
-### 3.3 Asynchronous CDC Latency & Flag Pessimism
+## 3.3 Synchronization Latency & Safe Flag Pessimism
 
 Passing pointers across asynchronous clock domains via 2FF synchronizers introduces a **2 clock cycle synchronization latency**. This latency introduces a structural, pessimistic bias into flag generation:
 
@@ -337,13 +331,9 @@ The write Gray pointer crosses into the read domain through two flip-flop stages
 ### Dynamic Simulation Parameters
 
 You can dynamically configure **all 4 simulation parameters** at runtime without re-compiling the design:
-
-| Parameter | Description | PowerShell Switch | Batch Position | Default Value | Example Values |
-| :--- | :--- | :--- | :---: | :---: | :---: |
-| **`Wclk`** | Write Clock Half-Period (ns) | `-Wclk <ns>` | Position 2 | `5` (100 MHz) | `2` (250 MHz) |
-| **`Rclk`** | Read Clock Half-Period (ns) | `-Rclk <ns>` | Position 3 | `7` (~71.4 MHz) | `10` (50 MHz) |
-| **`DataWidth`** | Hardware & UVM Data Bus Width (bits) | `-DataWidth <bits>` | Position 4 | `8` bits | `5` bits / `16` bits / `32` bits |
-| **`AddrWidth`** | Address Width / Memory Depth ($\text{Depth} = 2^{\text{AddrWidth}}$) | `-AddrWidth <bits>` | Position 5 | `4` (16 items) | `5` (32 items) / `6` (64 items) |
+### Default Simulation Parameters
+- **Clocks:** `Wclk` = 5 ns (100 MHz), `Rclk` = 7 ns (~71.4 MHz)
+- **FIFO Bus:** `DataWidth` = 8 bits, `AddrWidth` = 4 bits ($\text{Depth} = 16$)
 
 ---
 
@@ -354,14 +344,11 @@ You can dynamically configure **all 4 simulation parameters** at runtime without
    cd sim
    ```
 2. Run simulation with default or custom parameters:
-   ```bash
-   # 1. Run basic test (default settings)
-   .\run.bat
+   ```powershell
+   # 1. Run basic test suite (default settings)
+   .\run.ps1
 
-   # 2. Custom Parameters Run (Syntax: .\run.bat [TestName] [Wclk] [Rclk] [DataWidth] [AddrWidth])
-   .\run.bat fifo_reset_recovery_test 2 10 5 5
-
-   # PowerShell alternative:
+   # 2. Custom Parameters Run
    .\run.ps1 -TestName fifo_reset_recovery_test -Wclk 2 -Rclk 10 -DataWidth 16 -AddrWidth 5
    ```
 
