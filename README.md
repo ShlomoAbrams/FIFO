@@ -133,7 +133,7 @@ Since only a single bit toggles during pointer increment:
 
 ### Implementation: Binary-to-Gray Converter
 
-$$G = B \oplus (B \gg 1)$$
+$$\text{G} = \text{B} \text{ xor } (\text{B} \gg 1)$$
 
 ---
 
@@ -155,7 +155,7 @@ Flip-flops require input signals to remain stable during a setup and hold window
 * **3. The Metastable State:** Node X and node Y end up with conflicting voltage levels post-edge. Node X drives node Y through Transmission Gate 2 (with delay), while node Y drives node X back through the dual-inverter feedback path. Because their states conflict, both nodes get trapped at an intermediate voltage level ($V_{DD}/2$), causing output $Q$ to remain metastable until noise resolves the loop.  
   ![Metastable State](docs/Metastable_State.jpeg)
 
-* **4. Setup Violation:** Occurs if input $D$ changes too late before the clock edge, failing to reach node $X$ before sampling. Node $X$ retains its previous value.  
+* **4. Setup Violation:** Occurs if input $D$ changes too late before the clock edge. $D$ reaches node $Y$ but fails to propagate to node $X$ before sampling, causing node $X$ to retain its previous state different from the new $D$ value.  
   ![Setup Time Violation](docs/Setup_Time.jpeg)
 
 * **5. Hold Violation:** Occurs if input $D$ changes after the clock edge before Transmission Gate 1 completely isolates the input stage, altering node $Y$ and mismatching latched node $X$.  
@@ -163,8 +163,8 @@ Flip-flops require input signals to remain stable during a setup and hold window
 
 ---
 
-### Solution: 2-Stage Flip-Flop Resolution Window
-To prevent metastable outputs from propagating into internal control logic, Gray-coded pointers pass through **2-Stage Flip-Flop (2FF) Chains** in the destination domain.
+### Solution: Synchronizers (2FF)
+To prevent metastable outputs from propagating into internal control logic, Gray-coded pointers pass through **2-Stage Flip-Flop Chains** granting a full clock cycle of resolution time for any metastable state to decay
 
 ![2FF Synchronizer Architecture](docs/Gray_Pointer_Syncronizer.jpeg)
 
@@ -190,10 +190,13 @@ The insertion of $Q_2$ expands $t_r$ by nearly an entire clock period, which can
 
 ## 3.3 Synchronization Latency & Safe Flag Pessimism
 
-Passing pointers across asynchronous clock domains via 2FF synchronizers introduces a **2 clock cycle synchronization latency**. This latency introduces a structural, pessimistic bias into flag generation:
+Passing pointers across asynchronous clock domains via 2FF synchronizers introduces a **2 clock cycle delay**. Because pointers are compared against slightly delayed values from the opposite domain, status flags operate with a **safe, pessimistic bias**:
 
-- **`wfull` Pessimism:** The write pointer is compared to the read pointer that is 2 write-clock cycles old. The write domain may perceive the FIFO as "Full" slightly before it physically is (if reads occurred during synchronization). This bias is **completely safe**—it strictly prevents memory overflow/data corruption, though it temporarily restricts write throughput until synchronization completes.
-- **`rempty` Pessimism:** The read pointer is compared to the write pointer that is 2 read-clock cycles old. The read domain may perceive the FIFO as "Empty" slightly before it physically is (if writes occurred during synchronization). This bias is **completely safe**—it strictly prevents underflow/reading garbage data, ensuring strong data integrity across domains.
+- **`wfull` Pessimism:** Compares write pointer to a read pointer that is 2 cycles old. The write domain may see the FIFO as "Full" slightly longer than it actually is (if reads occurred during synchronization).
+  * **Safety Impact:** Strictly prevents **overflow** (overwriting data), at the cost of a temporary pause in write throughput.
+
+- **`rempty` Pessimism:** Compares read pointer to a write pointer that is 2 cycles old. The read domain may see the FIFO as "Empty" slightly longer than it actually is (if writes occurred during synchronization).
+  * **Safety Impact:** Strictly prevents **underflow** (reading garbage data), at the cost of a 2-cycle latency delay before newly written data can be read out.
 
 ---
 
