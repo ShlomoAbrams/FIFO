@@ -193,10 +193,10 @@ The insertion of $Q_2$ expands $t_r$ by nearly an entire clock period, which can
 Passing pointers across asynchronous clock domains via 2FF synchronizers introduces a **2 clock cycle delay**. Because pointers are compared against slightly delayed values from the opposite domain, status flags operate with a **safe, pessimistic bias**:
 
 - **`wfull` Pessimism:** Compares write pointer to a read pointer that is 2 cycles old. The write domain may see the FIFO as "Full" slightly longer than it actually is (if reads occurred during synchronization).
-  * **Safety Impact:** Strictly prevents **overflow** (overwriting data), at the cost of a temporary pause in write throughput.
+  * **Safety Impact:** Prevents **overflow** (overwriting data), at the cost of a temporary pause in write throughput.
 
 - **`rempty` Pessimism:** Compares read pointer to a write pointer that is 2 cycles old. The read domain may see the FIFO as "Empty" slightly longer than it actually is (if writes occurred during synchronization).
-  * **Safety Impact:** Strictly prevents **underflow** (reading garbage data), at the cost of a 2-cycle latency delay before newly written data can be read out.
+  * **Safety Impact:** Prevents **underflow** (reading garbage data), at the cost of a 2-cycle latency delay before newly written data can be read out.
 
 ---
 
@@ -205,6 +205,8 @@ Passing pointers across asynchronous clock domains via 2FF synchronizers introdu
 ## UVM Testbench Architecture
 
 ![UVM Environment](docs/UVM_Architecture.png)
+
+![UVM Testbench Architecture Detailed](docs/UVM_Architecture.jpeg)
 
 The testbench uses industry-standard UVM methodology:
 - **Testbench Layer**: Write and Read agents generate transactions via drivers and monitors.
