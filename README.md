@@ -11,7 +11,7 @@
 
 # Table of Contents
 - [1. Project Overview](#1-project-overview)
-  - [Summary](#executive-summary)
+  - [Summary](#summary)
   - [Why Asynchronous FIFOs Matter](#why-asynchronous-fifos-matter)
   - [Project Directory Structure](#project-directory-structure)
 - [2. FIFO Architecture & Functionality](#2-fifo-architecture--functionality)
@@ -21,15 +21,18 @@
   - [3.1 Gray Code Encoding](#31-gray-code-encoding)
   - [3.2 Preventing Metastability (Synchronizers)](#32-preventing-metastability-synchronizers)
   - [3.3 Synchronization Latency & Safe Flag Pessimism](#33-synchronization-latency--safe-flag-pessimism)
-- [4. Verification Environment (UVM & SVA)](#4-verification-environment-uvm--sva)
+- [4. UVM Verification Environment](#4-uvm-verification-environment)
+  - [Why a Simple Testbench is Insufficient](#why-a-simple-testbench-is-insufficient)
   - [UVM Testbench Architecture](#uvm-testbench-architecture)
-  - [Verification Trace Matrix (Features Verified)](#verification-trace-matrix-features-verified)
+  - [Testbench Signal Map](#testbench-signal-map)
+- [5. SystemVerilog Assertions (SVA) & Coverage](#5-systemverilog-assertions-sva--coverage)
   - [SystemVerilog Assertions (SVA - 12 Safety Checkers)](#systemverilog-assertions-sva---12-safety-checkers)
   - [Functional & Structural Code Coverage](#functional--structural-code-coverage)
-- [5. Waveform Analysis & Simulation Guide](#5-waveform-analysis--simulation-guide)
-  - [Simulation Waveform Traces](#simulation-waveform-traces)
+  - [Verification Trace Matrix (Features Verified)](#verification-trace-matrix-features-verified)
+  - [Coverage Results](#coverage-results)
+- [6. Waveform Analysis & Simulation Guide](#6-waveform-analysis--simulation-guide)
+  - [Read & Write Transactions](#read--write-transactions)
   - [Quick Start & Simulation Guide](#quick-start--simulation-guide)
-- [6. Author](#6-author)
 
 ---
 
@@ -200,38 +203,71 @@ Passing pointers across asynchronous clock domains via 2FF synchronizers introdu
 
 ---
 
-# 4. Verification Environment (UVM & SVA)
+# 4. UVM Verification Environment
+
+## Why a Simple Testbench is Insufficient
+
+A standard testbench focuses on toggling individual pins, making it difficult to handle the multiple clock domains and unpredictable timing of an asynchronous FIFO. To avoid debugging race conditions in the test code itself, we use SystemVerilog UVM to elevate the abstraction from "wiggling pins" to "sending transactions".
+
+### The Core Advantages of UVM:
+
+1. **Modularity:** UVM strictly isolates data generation, pin driving, and result checking into different components. This allows us to easily change one component without affecting the others.
+2. **Standardized Communication:** UVM libraries provide Transaction Level Modeling (TLM). Standardizing communication guarantees data is passed safely between testbench components without race conditions.
+3. **Scalability:** Scaling vertically or horizontally is trivial. We can easily add more FIFOs into the same testing enviroment by copying the agents and connecting them to the new fifo. Alternatively, we can integrate this FIFO into a larger SoC, by plugging the testbench into a larger verification environment without modification.
+
+---
 
 ## UVM Testbench Architecture
 
-![UVM Environment](docs/UVM_Architecture.png)
+![UVM Testbench Architecture](docs/UVM_Architecture.jpeg)
 
-![UVM Testbench Architecture Detailed](docs/UVM_Architecture.jpeg)
+The testbench operates using five primary UVM components:
+- **Agents:** The managers of a specific clock domain. They encapsulate the data generation, driving, and monitoring activity for their respective sides of the FIFO.
+- **Drivers:** Drive DUT input signals.
+- **Monitors:** Monitor hardware signals and send them to the scoreboard.
+- **Scoreboard:** Records data pushed into the FIFO and compares it against data popped out to verify zero data corruption.
+- **Virtual Interface:** Allows the testbench to drive and monitor signals on the DUT's pins.
 
-The testbench uses industry-standard UVM methodology:
-- **Testbench Layer**: Write and Read agents generate transactions via drivers and monitors.
-- **TLM & VIF Layer**: Translates UVM transactions to RTL signals via SystemVerilog interface (`fifo_if`).
-- **Hardware Layer**: DUT includes FIFO memory with CDC synchronizers.
-- **Scoreboard**: Compares expected vs. actual data with functional coverage metrics.
+### 🚚 UVM Logistics & Factory Analogy
+
+![UVM Logistics Analogy](docs/UVM_logistics_analogy.jpg)
+
+Beyond these five primary components, the testbench relies on several smaller elements like sequences and transactions to function. Below is a comprehensive explanation of how all these parts work together to verify the FIFO, using a shipping container logistics analogy:
+
+| Analogy | UVM Concept | Role in FIFO Verification |
+| :--- | :--- | :--- |
+| **📦 Write Container** | **Write Transaction** | Inbound data payload (`wdata`) driven into the FIFO. |
+| **📦 Read Container** | **Read Transaction** | Outbound data payload (`rdata`) popped from the FIFO. |
+| **📋 Write Order List** | **Write Sequence** | Generates planned write traffic (e.g., burst writes until `wfull`). |
+| **📋 Read Order List** | **Read Sequence** | Generates planned read requests (e.g., burst reads until `rempty`). |
+| **🏗️ Input Dock** | **Write Sequencer** | Queues write containers for the supplier truck. |
+| **🏗️ Output Dock** | **Read Sequencer** | Queues read request triggers for the pickup truck. |
+| **🚚 Supplier Truck** | **Write Driver** | Drives write signals (`winc`, `wdata`) onto the write interface. |
+| **🚚 Pickup Truck** | **Read Driver** | Drives read request signals (`rinc`) onto the read interface. |
+| **🟨 Supplier Logistics** | **Write Agent** | Groups Write Sequencer, Driver, and Monitor for the write clock domain (`wclk`). |
+| **🟩 Customer Logistics** | **Read Agent** | Groups Read Sequencer, Driver, and Monitor for the read clock domain (`rclk`). |
+| **🛣️ Write Highway** | **Write Interface** | Write clock domain wires (`wclk`, `wrst_n`, `winc`, `wdata`, `wfull`). |
+| **🛣️ Read Highway** | **Read Interface** | Read clock domain wires (`rclk`, `rrst_n`, `rinc`, `rdata`, `rempty`). |
+| **📷 Entry Camera** | **Write Monitor** | Scans inbound containers entering the FIFO and sends expected logs to Accounting Office. |
+| **📷 Exit Camera** | **Read Monitor** | Scans outbound containers leaving the FIFO and sends actual logs to Accounting Office. |
+| **📊 Accounting Office** | **Scoreboard** | Compares Expected (Write) vs Actual (Read) containers to verify data integrity (**PASS/FAIL**). |
+
+### Testbench Signal Map
+
+To get into the specifics, below is a table that explains how each hardware signal is influenced by each component in the UVM testbench.
+
+| Signal | Declared In | Driven By | Sampled By |
+| :--- | :--- | :--- | :--- |
+| **`wclk`, `rclk`** | [`uvm/fifo_top.sv`](uvm/fifo_top.sv) | **`fifo_top`** (`always` statement) | DUT, Interface Clocking Blocks |
+| **`wrst_n`, `rrst_n`** | [`uvm/fifo_if.sv`](uvm/fifo_if.sv) | **`fifo_top`** (Initial Time-0) & **`fifo_test`** / **`fifo_reset_recovery_test`** (Mid-traffic reset) | DUT, Drivers, Monitors, SVA |
+| **`winc`, `wdata`** | [`uvm/fifo_if.sv`](uvm/fifo_if.sv) | **`fifo_w_driver`**  | DUT, `fifo_w_monitor`, SVA |
+| **`rinc`** | [`uvm/fifo_if.sv`](uvm/fifo_if.sv) | **`fifo_r_driver`** | DUT, `fifo_r_monitor`, SVA |
+| **`wfull`, `rempty`, `rdata`** | [`uvm/fifo_if.sv`](uvm/fifo_if.sv) | **FIFO DUT** | Drivers, Monitors, Scoreboard, Test cases |
+| **`wclken_wire`, `rclken_wire`** | [`uvm/fifo_if.sv`](uvm/fifo_if.sv) | **FIFO DUT** (via **`fifo_connector`** bridge) | Monitors, SVA |
 
 ---
 
-## Verification Trace Matrix (Features Verified)
-
-| Verification Scenario | Status | SVA Checker Evidence | Functional Coverage Evidence |
-|---|---|---|---|
-| **FIFO Full Detection** | ✅ Passed | SVA #8 (Full Flag Generation) | Coverpoint `wfull` |
-| **FIFO Empty Detection** | ✅ Passed | SVA #7 (Empty Flag Generation) | Coverpoint `rempty` |
-| **Overflow Protection** | ✅ Passed | SVA #3 (Write Pointer Stability), SVA #9 (Write Gating) | Cross `winc` × `wfull` |
-| **Underflow Protection** | ✅ Passed | SVA #4 (Read Pointer Stability), SVA #10 (Read Gating) | Cross `rinc` × `rempty` |
-| **Simultaneous Read/Write** | ✅ Passed | SVA #11 (Data Integrity Checker) | Crosses `winc` / `rinc` × Occupancy |
-| **Pointer Wraparound** | ✅ Passed | SVA #12 (Memory Occupancy Bound Check) | Coverpoints `w_occupancy` / `r_occupancy` |
-| **Asynchronous Clock Ratios** | ✅ Passed | SVA #11 (Data Integrity Checker) | Parameterized clock period sweeps |
-| **Gray Pointer Correctness** | ✅ Passed | SVA #5, #6 (Gray-Code Integrity) | Coverpoints `wptr_g_cur` / `rptr_g_cur` |
-| **Reset Recovery** | ✅ Passed | SVA #1, #2 (Write/Read Domain Reset) | Coverpoints `wrst_n` / `rrst_n` |
-| **CDC Synchronization Behavior** | ✅ Passed | SVA #7, #8 (CDC Gray Pointers match) | Synchronized pointer cross tracking |
-
----
+# 5. SystemVerilog Assertions (SVA) & Coverage
 
 ## SystemVerilog Assertions (SVA - 12 Safety Checkers)
 
@@ -276,6 +312,23 @@ The verification plan defines **12 distinct coverpoints and crosses** (split bet
 11. **Cross `rinc` × `rempty`**: Proves read attempts are simulated under both Empty and Non-Empty conditions (tests underflow protection).
 12. **Cross `rinc` × `r_occupancy`**: Proves read requests are executed at every possible FIFO fill level.
 
+## Verification Trace Matrix (Features Verified)
+
+| Verification Scenario | Status | SVA Checker Evidence | Functional Coverage Evidence |
+|---|---|---|---|
+| **FIFO Full Detection** | ✅ Passed | SVA #8 (Full Flag Generation) | Coverpoint `wfull` |
+| **FIFO Empty Detection** | ✅ Passed | SVA #7 (Empty Flag Generation) | Coverpoint `rempty` |
+| **Overflow Protection** | ✅ Passed | SVA #3 (Write Pointer Stability), SVA #9 (Write Gating) | Cross `winc` × `wfull` |
+| **Underflow Protection** | ✅ Passed | SVA #4 (Read Pointer Stability), SVA #10 (Read Gating) | Cross `rinc` × `rempty` |
+| **Simultaneous Read/Write** | ✅ Passed | SVA #11 (Data Integrity Checker) | Crosses `winc` / `rinc` × Occupancy |
+| **Pointer Wraparound** | ✅ Passed | SVA #12 (Memory Occupancy Bound Check) | Coverpoints `w_occupancy` / `r_occupancy` |
+| **Asynchronous Clock Ratios** | ✅ Passed | SVA #11 (Data Integrity Checker) | Parameterized clock period sweeps |
+| **Gray Pointer Correctness** | ✅ Passed | SVA #5, #6 (Gray-Code Integrity) | Coverpoints `wptr_g_cur` / `rptr_g_cur` |
+| **Reset Recovery** | ✅ Passed | SVA #1, #2 (Write/Read Domain Reset) | Coverpoints `wrst_n` / `rrst_n` |
+| **CDC Synchronization Behavior** | ✅ Passed | SVA #7, #8 (CDC Gray Pointers match) | Synchronized pointer cross tracking |
+
+---
+
 ## Coverage Results
 
 | Coverage Type | Target | Status | Result |
@@ -296,7 +349,7 @@ The verification plan defines **12 distinct coverpoints and crosses** (split bet
 
 ---
 
-# 5. Waveform Analysis & Simulation Guide
+# 6. Waveform Analysis & Simulation Guide
 ![Waveform Simulation](docs/Waveform_Simulation.png)
 # Waveforms Colors Match Diagram Signals
 ![FIFO Block Diagram](docs/FIFO_Block_Diagram_Black.jpg)
@@ -375,11 +428,8 @@ You can dynamically configure **all 4 simulation parameters** at runtime without
    ```
 
 ---
-
-# 6. Author
+### 👨‍💻 Author
 
 **Shlomo Abrams**  
-Electrical Engineering Student  
-Digital Design & Verification Enthusiast  
-
-GitHub: [github.com/ShlomoAbrams](https://github.com/ShlomoAbrams)
+*Electrical Engineering Student | Digital Design & Verification Enthusiast*  
+[GitHub](https://github.com/ShlomoAbrams)
