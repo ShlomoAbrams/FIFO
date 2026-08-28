@@ -12,6 +12,7 @@
 # Table of Contents
 - [1. Project Overview](#1-project-overview)
   - [Summary](#summary)
+  - [What is a FIFO?](#what-is-a-fifo)
   - [Why Asynchronous FIFOs Matter](#why-asynchronous-fifos-matter)
   - [Project Directory Structure](#project-directory-structure)
 - [2. FIFO Architecture & Functionality](#2-fifo-architecture--functionality)
@@ -40,6 +41,9 @@
 
 ### Summary
 This project implements a parameterized dual-clock asynchronous FIFO in VHDL for safe data transfer across independent clock domains (CDC). The design is fully verified using a SystemVerilog UVM environment with SVA assertions and 100% coverage.
+
+### What is a FIFO?
+A FIFO (First-In, First-Out) is a hardware data buffer where the first piece of data written into the memory is the first piece of data read out, acting like a queue. An **asynchronous** FIFO has independent clocks for writing and reading, allowing systems operating at different speeds to communicate.
 
 ### Why Asynchronous FIFOs Matter
 Modern digital chips operate different modules with independent clock frequencies. Asynchronous FIFOs serve as critical data bridges between these clock domains, ensuring fast and reliable data transfer without data loss or corruption.
