@@ -26,8 +26,10 @@
   - [Why a Simple Testbench is Insufficient](#why-a-simple-testbench-is-insufficient)
   - [UVM Testbench Architecture](#uvm-testbench-architecture)
   - [Testbench Signal Map](#testbench-signal-map)
-- [5. SystemVerilog Assertions (SVA) & Coverage](#5-systemverilog-assertions-sva--coverage)
-  - [SystemVerilog Assertions (SVA - 12 Safety Checkers)](#systemverilog-assertions-sva---12-safety-checkers)
+- [5. SVA & Coverage](#5-sva--coverage)
+  - [Why use SystemVerilog Assertions?](#why-use-systemverilog-assertions)
+  - [SystemVerilog Assertions - 12 Safety Checkers](#systemverilog-assertions---12-safety-checkers)
+  - [Defense in Depth (Data Integrity)](#defense-in-depth-data-integrity)
   - [Functional & Structural Code Coverage](#functional--structural-code-coverage)
   - [Verification Trace Matrix (Features Verified)](#verification-trace-matrix-features-verified)
   - [Coverage Results](#coverage-results)
@@ -43,6 +45,8 @@
 This project implements a parameterized dual-clock asynchronous FIFO in VHDL for safe data transfer across independent clock domains (CDC). The design is fully verified using a SystemVerilog UVM environment with SVA assertions and 100% coverage.
 
 ### What is a FIFO?
+![FIFO queue](docs/fifo_queue.jpg)
+
 A FIFO (First-In, First-Out) is a hardware data buffer where the first piece of data written into the memory is the first piece of data read out, acting like a queue. An **asynchronous** FIFO has independent clocks for writing and reading, allowing systems operating at different speeds to communicate.
 
 ### Why Asynchronous FIFOs Matter
@@ -232,11 +236,11 @@ The testbench operates using five primary UVM components:
 - **Scoreboard:** Records data pushed into the FIFO and compares it against data popped out to verify zero data corruption.
 - **Virtual Interface:** Allows the testbench to drive and monitor signals on the DUT's pins.
 
-### 🚚 UVM Logistics & Factory Analogy
+### 🚚 UVM Logistics Analogy
 
 ![UVM Logistics Analogy](docs/UVM_logistics_analogy.jpg)
 
-Beyond these five primary components, the testbench relies on several smaller elements like sequences and transactions to function. Below is a comprehensive explanation of how all these parts work together to verify the FIFO, using a shipping container logistics analogy:
+Beyond these five primary components, the testbench relies on several smaller elements like sequences and transactions to function. Below is an explanation of how these parts work together to verify the FIFO, using a shipping container logistics analogy:
 
 | Analogy | UVM Concept | Role in FIFO Verification |
 | :--- | :--- | :--- |
@@ -271,24 +275,38 @@ To get into the specifics, below is a table that explains how each hardware sign
 
 ---
 
-# 5. SystemVerilog Assertions (SVA) & Coverage
+# 5. SVA & Coverage
 
-## SystemVerilog Assertions (SVA - 12 Safety Checkers)
+## Why use SystemVerilog Assertions?
 
-The verification environment contains **12 concurrent and immediate SystemVerilog Assertions** to check the safety and correctness of the design protocol in real time:
+We use the **Scoreboard** as our **Black-Box** checker. Operating in the software domain, it uses **Object-Oriented Programming** to abstract external pin activity into high-level, "timeless" transactions. Because it tracks abstract data rather than physical clocks, the Scoreboard is blind to timing bugs but perfect for verifying data that stays in the queue over long periods of time.
 
-1. **Write Domain Reset:** Asserts that when the write reset (`wrst_n`) is active, all write pointers (`waddr`, binary, Gray) and the `wfull` flag are correctly initialized to `0`.
-2. **Read Domain Reset:** Asserts that when the read reset (`rrst_n`) is active, all read pointers (`raddr`, binary, Gray) are initialized to `0` and `rempty` is asserted (`1`).
-3. **Write Pointer Stability (No Overwrite):** Verifies that if `wfull` is asserted, any subsequent write requests (`winc`) will not increment the write pointers (protects against write overflow).
-4. **Read Pointer Stability (No Overread):** Verifies that if `rempty` is asserted, any subsequent read requests (`rinc`) will not increment the read pointers (protects against read underflow).
-5. **Write Gray-Code Integrity:** Checks that the write Gray-code pointer changes by only one bit per increment step, ensuring CDC safety.
-6. **Read Gray-Code Integrity:** Checks that the read Gray-code pointer changes by only one bit per increment step, ensuring CDC safety.
-7. **Empty Flag Generation:** Verifies that when the read Gray pointer equals the synchronized write Gray pointer, the `rempty` flag is asserted.
-8. **Full Flag Generation:** Verifies that when the write Gray pointer matches the synchronized read Gray pointer (with the two MSBs inverted), the `wfull` flag is asserted.
-9. **Write Enable Gating:** Verifies that the internal write memory enable (`wclken`) is only active when `winc = 1` and `wfull = 0`.
-10. **Read Enable Gating:** Verifies that the internal read memory enable (`rclken`) is only active when `rinc = 1` and `rempty = 0`.
-11. **Data Integrity Checker:** Compares the read data `rdata` against a golden shadow memory array (`fifo_data`) at the read address to check for data corruption.
-12. **Memory Occupancy Bound Check:** Verifies that the modular difference between the write pointer and synchronized read pointer (`w_occupancy`) never exceeds the maximum FIFO `DEPTH`.
+However, if the Scoreboard detects a failure, it only tells us that the data broke, not *why*. Did a write pointer increment too fast? Did a synchronizer fail? 
+
+To catch these hardware-level bugs the exact cycle they happen, we implemented **SVA** as our **White-Box** checker. Built using strictly timed **Temporal Logic**, SVA lives in the hardware domain. Unlike the Scoreboard, SVA is perfect for checking immediate, short-term events. It monitors internal signals cycle-by-cycle, telling us exactly *why* and *when* a protocol was violated.
+
+## SystemVerilog Assertions - 12 Safety Checkers
+
+The verification environment contains **12 concurrent and immediate SystemVerilog Assertions** to check the safety and correctness of the FIFO protocol:
+
+1. **Write Domain Reset:** Asserts that when the write reset is active, all write pointers (`waddr`, binary, Gray) and the full flag are correctly initialized to `0`.
+2. **Read Domain Reset:** Asserts that when the read reset is active, all read pointers (`raddr`, binary, Gray) are initialized to `0` and the empty flag is asserted (`1`).
+3. **Write Pointer Stability (No Overwrite):** Verifies that if the full flag is asserted, any subsequent write requests (`winc`) will not increment the write pointers.
+4. **Read Pointer Stability (No Overread):** Verifies that if the empty flag is asserted, any subsequent read requests (`rinc`) will not increment the read pointers.
+5. **Write Gray-Code Integrity:** Checks that the write Gray-code pointer changes by only one bit per increment step.
+6. **Read Gray-Code Integrity:** Checks that the read Gray-code pointer changes by only one bit per increment step.
+7. **Empty Flag Generation:** Verifies that when the read Gray pointer equals the synchronized write Gray pointer, the empty flag is asserted.
+8. **Full Flag Generation:** Verifies that when the write Gray pointer matches the synchronized read Gray pointer (with the two MSBs inverted), the full flag is asserted.
+9. **Write Enable Gating:** Verifies that `wclken` is only active when `winc = 1` and `wfull = 0`.
+10. **Read Enable Gating:** Verifies that `rclken` is only active when `rinc = 1` and `rempty = 0`.
+11. **Data Integrity Checker:** Compares the read data against a golden shadow memory array (`fifo_data`) at the read address to check for data corruption.
+12. **Memory Occupancy Bound Check:** Verifies that the modular difference between the write pointer and synchronized read pointer never exceeds the FIFO depth.
+
+### Defense in Depth (Data Integrity)
+
+While SVA checker #11 behaves like a scoreboard by verifying data integrity, keeping both provides **Defense in Depth** for debugging. 
+
+**Why check data integrity twice?** If both the SVA and the Scoreboard fail, the internal memory array corrupted the data. If *only* the Scoreboard fails, the memory is fine, but data was corrupted externally on the bus.
 
 ---
 
