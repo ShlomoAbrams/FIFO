@@ -85,65 +85,87 @@ fifo_r_cg r_cg = new(); // create an instance
 		if (rrst_n) r_cg.sample(); // samples every cycle read signal values
 	end
 
-// Write side Reset Assertion - pointers and full flag reset
+// 1. Write side Reset Assertion - pointers and full flag reset
 assert property (@(posedge wclk) 
 !wrst_n |=> (waddr == '0) && (wptr_g_cur == '0) && (wptr_b_cur == '0) && (wfull == 0) // Check one cycle that signals are reset
 );
 
-// Read Side Reset Assertion - pointers and empty flag reset
+// 2. Read Side Reset Assertion - pointers and empty flag reset
 assert property (@(posedge rclk) 
 !rrst_n |=> (raddr == '0) && (rptr_g_cur == '0) && (rptr_b_cur == '0) && (rempty == 1) // Check one cycle that signals are reset
 );
 
-// Write Pointer stability - No Overwrite - when full then pointer doesn't increment.
+// 3. Write Pointer stability - No Overwrite - when full then pointer doesn't increment.
 assert property (@(posedge wclk) 
 disable iff(!wrst_n)
 (wfull && winc) |=> $stable(wptr_g_cur) && $stable(wptr_b_cur)
 );
 
-// Read Pointer stability - No Overread - when empty then pointer doesn't increment.
+// 4. Read Pointer stability - No Overread - when empty then pointer doesn't increment.
 assert property (@(posedge rclk) 
 disable iff(!rrst_n)
 (rempty && rinc) |=> $stable(rptr_g_cur) && $stable(rptr_b_cur)
 );
 
-// Gray Code Integrity (Write pointer) - verify only one bit change every cycle.
+// 5. Gray Code Integrity (Write pointer) - verify only one bit change every cycle.
 assert property (
 @(posedge wclk) disable iff(!wrst_n)
 $changed(wptr_g_cur) |-> ($countones(wptr_g_cur^($past(wptr_g_cur)))== 1)
 );
 
-// Gray Code Integrity (Read pointer) - verify only one bit change every cycle.
+// 6. Gray Code Integrity (Read pointer) - verify only one bit change every cycle.
 assert property (
 @(posedge rclk) disable iff(!rrst_n)
 $changed(rptr_g_cur) |-> ($countones(rptr_g_cur^($past(rptr_g_cur)))== 1)
 );
 
-// Empty Flag Verification - check if empty when write & read pointer are equal.  (rempty is updated one cycle after pointers equal)  
+// 7. Empty Flag Verification - check if empty when write & read pointer are equal.  (rempty is updated one cycle after pointers equal)  
 assert property(
 @(posedge rclk) disable iff(!rrst_n)
 (rptr_g_cur == r2q_wptr)|=> (rempty == 1)
 );
 
-// Full Flag Verification - check if full when top 2 msb bits are opposite and lower bits are identical.(if and only if)
+// 8. Full Flag Verification - check if full when top 2 msb bits are opposite and lower bits are identical.(if and only if)
 assert property (
 @(posedge wclk) disable iff(!wrst_n)
 ((wptr_g_cur[ADDR_WIDTH] != w2q_rptr[ADDR_WIDTH]) &&  (wptr_g_cur[ADDR_WIDTH-1] != w2q_rptr[ADDR_WIDTH-1]) && (wptr_g_cur[ADDR_WIDTH-2:0] == w2q_rptr[ADDR_WIDTH-2:0])) |=> (wfull == 1)
 );
 
-// Write Enable Verification - check that we only enable writing if not full and winc is high.
+// 9. Write Enable Verification - check that we only enable writing if not full and winc is high.
 assert property (@(posedge wclk)
 disable iff (!wrst_n)
 wclken |-> (!wfull && winc)
 );
 
-// Read Enable Verification - check that we only enable reading if not empty and rinc is high.
+// 10. Read Enable Verification - check that we only enable reading if not empty and rinc is high.
 assert property (@(posedge rclk)
 disable iff(!rrst_n)
 rclken |-> (!rempty && rinc)
 );
 
-// Data Integrity - Check that the data that goes in first exits first: 
+// 11. Memory management: (write_ptr - synchronized read_ptr) <= DEPTH]. 
+property memory_management;
+	@(posedge wclk) disable iff (!wrst_n)		// Check that write & read pointer aren't out of bounds. 
+												// Uses synchronized read pointer (w2q_rptr_bin), so check is slightly pessimistic but guarantees safety. 
+	w_occupancy <= (DEPTH); 	// Counters are ADDR_WIDTH+1 bit long so their difference can exceed DEPTH in case of overflow. Cast result to (ADDR_WIDTH+1) to force modular arithmetic. This handles pointer wrap-around correctly by truncating expanded 32-bit signed results to the physical 5-bit pointer distance, preventing false assertion failures.
+
+endproperty
+
+assert_memory_management: assert property (memory_management)
+	else $error("FIFO pointer out of bounds! Calculated: %0d", (ADDR_WIDTH+1)'(wptr_b_cur - w2q_rptr_bin));
+
+// 12. Read memory management: (synchronized write_ptr - read_ptr) <= DEPTH]. 
+property r_memory_management;
+	@(posedge rclk) disable iff (!rrst_n)		// Check that write & read pointer aren't out of bounds. 
+												// Uses synchronized write pointer (r2q_wptr_bin), so check is slightly pessimistic but guarantees safety. 
+	r_occupancy <= (DEPTH); 	// Counters are ADDR_WIDTH+1 bit long so their difference can exceed DEPTH in case of overflow. Cast result to (ADDR_WIDTH+1) to force modular arithmetic. This handles pointer wrap-around correctly by truncating expanded 32-bit signed results to the physical 5-bit pointer distance, preventing false assertion failures.
+
+endproperty
+
+assert_r_memory_management: assert property (r_memory_management)
+	else $error("FIFO pointer out of bounds on read side! Calculated: %0d", (ADDR_WIDTH+1)'(r2q_wptr_bin - rptr_b_cur));
+
+// 13. Data Integrity - Check that the data that goes in first exits first: 
 	logic [DATA_WIDTH-1:0] fifo_data [0:DEPTH-1]; // Array to save data
 	logic [ADDR_WIDTH-1:0] w_index; // write address ,increments whenever you write.
 	
@@ -169,16 +191,5 @@ rclken |-> (!rempty && rinc)
 			else $error("Data mismatch at read address %0h, expected %0h, got %0h", $past(raddr), fifo_data[$past(raddr)], rdata); // Error where the data didn't match.
 		end
 	end
-
-// Memory management: (write_ptr - synchronized read_ptr) <= DEPTH]. 
-property memory_management;
-	@(posedge wclk) disable iff (!wrst_n)		// Check that write & read pointer aren't out of bounds. 
-												// Uses synchronized read pointer (w2q_rptr_bin), so check is slightly pessimistic but guarantees safety. 
-	w_occupancy <= (DEPTH); 	// Counters are ADDR_WIDTH+1 bit long so their difference can exceed DEPTH in case of overflow. Cast result to (ADDR_WIDTH+1) to force modular arithmetic. This handles pointer wrap-around correctly by truncating expanded 32-bit signed results to the physical 5-bit pointer distance, preventing false assertion failures.
-
-endproperty
-
-assert_memory_management: assert property (memory_management)
-	else $error("FIFO pointer out of bounds! Calculated: %0d", (ADDR_WIDTH+1)'(wptr_b_cur - w2q_rptr_bin));
 
 endmodule

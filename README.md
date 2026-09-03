@@ -28,7 +28,7 @@
   - [Testbench Signal Map](#testbench-signal-map)
 - [5. SVA & Coverage](#5-sva--coverage)
   - [Why use SystemVerilog Assertions?](#why-use-systemverilog-assertions)
-  - [SystemVerilog Assertions - 12 Safety Checkers](#systemverilog-assertions---12-safety-checkers)
+  - [SystemVerilog Assertions - 13 Safety Checkers](#systemverilog-assertions---13-safety-checkers)
   - [Defense in Depth (Data Integrity)](#defense-in-depth-data-integrity)
   - [Functional & Structural Code Coverage](#functional--structural-code-coverage)
   - [Verification Trace Matrix (Features Verified)](#verification-trace-matrix-features-verified)
@@ -153,24 +153,51 @@ $$\text{G} = \text{B} \text{ xor } (\text{B} \gg 1)$$
 ### Problem: Setup/Hold Timing Violations
 Even with Gray-coded pointers, a single transitioning bit can still violate the setup or hold timing requirements of the receiving flip-flop, leading to **metastability**.
 
-Flip-flops require input signals to remain stable during a setup and hold window around the active clock edge. Asynchronous clocks render these violations inevitable, leaving internal latch nodes at an unstable intermediate voltage state ($V_{DD}/2$) that can cause output oscillations.
+Flip-flops require input signals to remain stable during a setup and hold window around the active clock edge. Because the clocks are asynchronous, such violations cannot be completely avoided.
 
-#### How Metastability Occurs (Internal Flip-Flop Dynamics)
+#### How Metastability Occurs — Internal Flip-Flop Dynamics
 
-* **1. Before Clock Edge:** Input $D$ is latched on node $X$.  
-  ![Before Edge](docs/Before_Edge.png)
+A flip-flop can be viewed internally as a regenerative circuit containing cross-coupled inverters controlled by transmission gates.
 
-* **2. After Clock Edge:** Node $X$ is transferred to output $Q$.  
-  ![After Edge](docs/After_Edge.png)
+1. **Before the Clock Edge:**
+   The input data propagates through the input stage and establishes a voltage on an internal storage node.  
+   ![Before Edge](docs/Before_Edge.png)
 
-* **3. The Metastable State:** Node X and node Y end up with conflicting voltage levels post-edge. Node X drives node Y through Transmission Gate 2 (with delay), while node Y drives node X back through the dual-inverter feedback path. Because their states conflict, both nodes get trapped at an intermediate voltage level ($V_{DD}/2$), causing output $Q$ to remain metastable until noise resolves the loop.  
-  ![Metastable State](docs/Metastable_State.jpeg)
+2. **At the Clock Edge:**
+   The transmission gates change state, disconnecting the input path and enabling the regenerative feedback path. If the input changes within the setup/hold window, the internal nodes may contain conflicting voltage levels.  
+   ![After Edge](docs/After_Edge.png)
 
-* **4. Setup Violation:** Occurs if input $D$ changes too late before the clock edge. $D$ reaches node $Y$ but fails to propagate to node $X$ before sampling, causing node $X$ to retain its previous state different from the new $D$ value.  
-  ![Setup Time Violation](docs/Setup_Time.jpeg)
+3. **Analog Contention:**
+   At this point, the internal nodes are no longer behaving as ideal digital 0/1 signals. The feedback path and the transmission-gate paths interact dynamically. One node can drive the other through the feedback inverters while the other node simultaneously affects the first. The exact transient behavior depends on transistor drive strengths, capacitances, propagation delays, and process variations.  
+   ![Metastable State](docs/Metastable_State.jpeg)
 
-* **5. Hold Violation:** Occurs if input $D$ changes after the clock edge before Transmission Gate 1 completely isolates the input stage, altering node $Y$ and mismatching latched node $X$.  
-  ![Hold Time Violation](docs/Hold_Time.jpeg)
+4. **Metastable Equilibrium:**
+   The cross-coupled inverter pair has two stable states (logic 0 and logic 1) and an unstable equilibrium point between them. This equilibrium voltage, often denoted $V_M$, is typically near $V_{DD}/2$, but is not necessarily exactly $V_{DD}/2$.
+
+   If the contention leaves the regenerative loop sufficiently close to this unstable equilibrium, the positive feedback initially has only a very small voltage difference to amplify. The circuit therefore requires additional time to resolve to a valid logic 0 or 1.
+
+5. **Regeneration:**
+   Around the metastable point, the voltage difference can grow approximately exponentially:
+
+   $$
+   \Delta V(t) = \Delta V_0 e^{t/\tau}
+   $$
+
+   where $\Delta V_0$ is the initial voltage difference from the metastable equilibrium and $\tau$ is the characteristic resolution time constant of the circuit.
+
+   Therefore, the closer the internal state is to the unstable equilibrium after the initial transient, the longer the resolution can take. The important quantity is not whether a node is exactly at $V_{DD}/2$, but how close the regenerative circuit as a whole is to its unstable equilibrium.
+
+6. **Setup Violation:**
+   Occurs if input $D$ changes too late before the clock edge. $D$ reaches the internal input node but fails to propagate through the storage path before sampling, leaving the regenerative latch in a potentially metastable condition.  
+   ![Setup Time Violation](docs/Setup_Time.jpeg)
+
+7. **Hold Violation:**
+   Occurs if input $D$ changes too soon after the clock edge, before the input transmission path has completely isolated the storage node, again potentially leaving the regenerative latch close to its metastable equilibrium.  
+   ![Hold Time Violation](docs/Hold_Time.jpeg)
+
+#### Key Point
+
+Metastability should not be interpreted simply as "both internal nodes becoming $V_{DD}/2$." Instead, it is a dynamic analog condition in which the regenerative latch is left close to its unstable equilibrium. The exact internal voltages during the transient are circuit-dependent.
 
 ---
 
@@ -180,7 +207,7 @@ To prevent metastable outputs from propagating into internal control logic, Gray
 ![2FF Synchronizer Architecture](docs/Gray_Pointer_Syncronizer.jpeg)
 
 1. **Stage 1 ($Q_1$):** Samples the raw asynchronous Gray pointer. If a setup/hold violation occurs, $Q_1$ may become metastable.
-2. **Resolution Window ($t_r$):** $Q_1$ is granted a full destination clock cycle for its internal node voltages to decay to a deterministic digital '0' or '1'.
+2. **Resolution Window ($t_r$):** $Q_1$ is given approximately one destination-clock cycle for any metastable condition to resolve through the regenerative feedback into a deterministic digital '0' or '1'.
 3. **Stage 2 ($Q_2$):** Samples the settled output of $Q_1$. Because the probability of $Q_1$ remaining metastable for a full clock cycle is exponentially low, $Q_2$ creates a clean, synchronized signal.
 
 #### Mean Time Between Failures (MTBF)
@@ -285,9 +312,9 @@ However, if the Scoreboard detects a failure, it only tells us that the data bro
 
 To catch these hardware-level bugs the exact cycle they happen, we implemented **SVA** as our **White-Box** checker. Built using strictly timed **Temporal Logic**, SVA lives in the hardware domain. Unlike the Scoreboard, SVA is perfect for checking immediate, short-term events. It monitors internal signals cycle-by-cycle, telling us exactly *why* and *when* a protocol was violated.
 
-## SystemVerilog Assertions - 12 Safety Checkers
+## SystemVerilog Assertions - 13 Safety Checkers
 
-The verification environment contains **12 concurrent and immediate SystemVerilog Assertions** to check the safety and correctness of the FIFO protocol:
+The verification environment contains **13 concurrent and immediate SystemVerilog Assertions** to check the safety and correctness of the FIFO protocol:
 
 1. **Write Domain Reset:** Asserts that when the write reset is active, all write pointers (`waddr`, binary, Gray) and the full flag are correctly initialized to `0`.
 2. **Read Domain Reset:** Asserts that when the read reset is active, all read pointers (`raddr`, binary, Gray) are initialized to `0` and the empty flag is asserted (`1`).
@@ -299,12 +326,13 @@ The verification environment contains **12 concurrent and immediate SystemVerilo
 8. **Full Flag Generation:** Verifies that when the write Gray pointer matches the synchronized read Gray pointer (with the two MSBs inverted), the full flag is asserted.
 9. **Write Enable Gating:** Verifies that `wclken` is only active when `winc = 1` and `wfull = 0`.
 10. **Read Enable Gating:** Verifies that `rclken` is only active when `rinc = 1` and `rempty = 0`.
-11. **Data Integrity Checker:** Compares the read data against a golden shadow memory array (`fifo_data`) at the read address to check for data corruption.
-12. **Memory Occupancy Bound Check:** Verifies that the modular difference between the write pointer and synchronized read pointer never exceeds the FIFO depth.
+11. **Write Memory Occupancy Bound Check:** Verifies that the difference between the write pointer and synchronized read pointer never exceeds the FIFO depth.
+12. **Read Memory Occupancy Bound Check:** Verifies that the difference between the synchronized write pointer and read pointer never exceeds the FIFO depth on the read side.
+13. **Data Integrity Checker:** Compares the read data against a golden shadow memory array (`fifo_data`) at the read address to check for data corruption.
 
 ### Defense in Depth (Data Integrity)
 
-While SVA checker #11 behaves like a scoreboard by verifying data integrity, keeping both provides **Defense in Depth** for debugging. 
+While SVA checker #13 behaves like a scoreboard by verifying data integrity, keeping both provides **Defense in Depth** for debugging. 
 
 **Why check data integrity twice?** If both the SVA and the Scoreboard fail, the internal memory array corrupted the data. If *only* the Scoreboard fails, the memory is fine, but data was corrupted externally on the bus.
 
@@ -338,16 +366,13 @@ The verification plan defines **12 distinct coverpoints and crosses** (split bet
 
 | Verification Scenario | Status | SVA Checker Evidence | Functional Coverage Evidence |
 |---|---|---|---|
-| **FIFO Full Detection** | ✅ Passed | SVA #8 (Full Flag Generation) | Coverpoint `wfull` |
-| **FIFO Empty Detection** | ✅ Passed | SVA #7 (Empty Flag Generation) | Coverpoint `rempty` |
-| **Overflow Protection** | ✅ Passed | SVA #3 (Write Pointer Stability), SVA #9 (Write Gating) | Cross `winc` × `wfull` |
-| **Underflow Protection** | ✅ Passed | SVA #4 (Read Pointer Stability), SVA #10 (Read Gating) | Cross `rinc` × `rempty` |
-| **Simultaneous Read/Write** | ✅ Passed | SVA #11 (Data Integrity Checker) | Crosses `winc` / `rinc` × Occupancy |
-| **Pointer Wraparound** | ✅ Passed | SVA #12 (Memory Occupancy Bound Check) | Coverpoints `w_occupancy` / `r_occupancy` |
-| **Asynchronous Clock Ratios** | ✅ Passed | SVA #11 (Data Integrity Checker) | Parameterized clock period sweeps |
-| **Gray Pointer Correctness** | ✅ Passed | SVA #5, #6 (Gray-Code Integrity) | Coverpoints `wptr_g_cur` / `rptr_g_cur` |
 | **Reset Recovery** | ✅ Passed | SVA #1, #2 (Write/Read Domain Reset) | Coverpoints `wrst_n` / `rrst_n` |
-| **CDC Synchronization Behavior** | ✅ Passed | SVA #7, #8 (CDC Gray Pointers match) | Synchronized pointer cross tracking |
+| **Pointer Stability (Overflow/Underflow)** | ✅ Passed | SVA #3, #4 (Write/Read Pointer Stability) | Crosses `winc` × `wfull` / `rinc` × `rempty` |
+| **Gray Pointer Correctness** | ✅ Passed | SVA #5, #6 (Gray-Code Integrity) | Indirectly by Coverpoints `w_occupancy` / `r_occupancy` |
+| **FIFO Flag Detection (Empty/Full)** | ✅ Passed | SVA #7, #8 (Flag Generation & CDC Sync) | Coverpoints `rempty` / `wfull` |
+| **Enable Logic Gating** | ✅ Passed | SVA #9, #10 (Write/Read Enable Gating) | Crosses `winc` × `wfull` / `rinc` × `rempty` |
+| **Pointer Wraparound & Bounds** | ✅ Passed | SVA #11, #12 (Memory Occupancy Bound Checks) | Coverpoints `w_occupancy` / `r_occupancy` |
+| **Data Integrity** | ✅ Passed | SVA #13 (Data Integrity Checker) | Verified by UVM Scoreboard |
 
 ---
 
