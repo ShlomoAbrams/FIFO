@@ -169,7 +169,7 @@ A flip-flop can be viewed internally as a regenerative circuit containing cross-
 
 3. **Analog Contention:**
    At this point, the internal nodes are no longer behaving as ideal digital 0/1 signals. The feedback path and the transmission-gate paths interact dynamically. One node can drive the other through the feedback inverters while the other node simultaneously affects the first. The exact transient behavior depends on transistor drive strengths, capacitances, propagation delays, and process variations.  
-   ![Metastable State](docs/Metastable_State.jpeg)
+   ![Metastable state](docs/Metastable_state.jpeg)
 
 4. **Metastable Equilibrium:**
    The cross-coupled inverter pair has two stable states (logic 0 and logic 1) and an unstable equilibrium point between them. This equilibrium voltage, often denoted $V_M$, is typically near $V_{DD}/2$, but is not necessarily exactly $V_{DD}/2$.
@@ -265,7 +265,7 @@ The testbench operates using five primary UVM components:
 
 ### 🚚 UVM Logistics Analogy
 
-![UVM Logistics Analogy](docs/UVM_logistics_analogy.jpg)
+![UVM Logistics Analogy](docs/uvm_logistics_analogy.jpg)
 
 Beyond these five primary components, the testbench relies on several smaller elements like sequences and transactions to function. Below is an explanation of how these parts work together to verify the FIFO, using a shipping container logistics analogy:
 
@@ -303,6 +303,8 @@ To get into the specifics, below is a table that explains how each hardware sign
 ---
 
 # 5. SVA & Coverage
+
+![SVA & Coverage Diagram](docs/sva_&_coverage.jpg)
 
 ## Why use SystemVerilog Assertions?
 
