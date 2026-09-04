@@ -186,16 +186,16 @@ $$\Delta V(t) = \Delta V_0 e^{t/\tau}$$
    Therefore, the closer the internal state is to the unstable equilibrium after the initial transient, the longer the resolution can take. The important quantity is not whether a node is exactly at $V_{DD}/2$, but how close the regenerative circuit as a whole is to its unstable equilibrium.
 
 6. **Setup Violation:**
-   Occurs if input $D$ changes too late before the clock edge. $D$ reaches the internal input node but fails to propagate through the storage path before sampling, leaving the regenerative latch in a potentially metastable condition.  
+   Occurs if input $D$ transitions too close to the clock edge. Although $D$ propagates through the input transmission gate to node $Y$, it fails to propagate through the internal inverters in time to establish a stable, matching voltage on node $X$ before sampling. When the clock edge arrives and the feedback transmission gate closes while $Y \neq X$, the conflicting voltages fight each other, trapping the regenerative latch near its unstable equilibrium and causing metastability.  
    ![Setup Time Violation](docs/Setup_Time.jpeg)
 
 7. **Hold Violation:**
-   Occurs if input $D$ changes too soon after the clock edge, before the input transmission path has completely isolated the storage node, again potentially leaving the regenerative latch close to its metastable equilibrium.  
+   Occurs if input $D$ changes too soon after the clock edge. Because the input transmission gate requires finite time to fully shut off, a premature transition on $D$ leaks into node $Y$ while the feedback transmission gate is already closing. This disrupts the closing feedback loop ($Y \neq X$), disturbing the settling state and potentially forcing the regenerative latch back toward metastability.  
    ![Hold Time Violation](docs/Hold_Time.jpeg)
 
 #### Key Point
 
-Metastability should not be interpreted simply as "both internal nodes becoming $V_{DD}/2$." Instead, it is a dynamic analog condition in which the regenerative latch is left close to its unstable equilibrium. The exact internal voltages during the transient are circuit-dependent.
+Metastability occurs when a timing violation leaves internal nodes in conflict ($Y \neq X$), closing the regenerative feedback loop forces the latch close to its unstable equilibrium point ($V_M$). The closer the initial voltage difference ($\Delta V_0$) is to zero, the longer positive feedback requires to amplify the signal and resolve the flip-flop to a valid digital '0' or '1'.
 
 ---
 
