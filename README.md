@@ -179,9 +179,7 @@ A flip-flop can be viewed internally as a regenerative circuit containing cross-
 5. **Regeneration:**
    Around the metastable point, the voltage difference can grow approximately exponentially:
 
-   $$
-   \Delta V(t) = \Delta V_0 e^{t/\tau}
-   $$
+$$\Delta V(t) = \Delta V_0 e^{t/\tau}$$
 
    where $\Delta V_0$ is the initial voltage difference from the metastable equilibrium and $\tau$ is the characteristic resolution time constant of the circuit.
 
