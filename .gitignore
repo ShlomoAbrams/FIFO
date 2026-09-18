@@ -18,3 +18,16 @@ __pycache__/
 *.pyc
 *.ucdb
 modelsim.ini
+
+# LaTeX build artifacts & temporary files
+*.aux
+*.log
+*.synctex.gz
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.zip
+
+# LinkedIn Files
+/LinkedIn 

@@ -54,43 +54,11 @@ Modern digital chips operate different modules with independent clock frequencie
 
 ### Project Directory Structure
 
-```text
-FIFO/
-│
-├── rtl/
-│   ├── fifo.vhd
-│   ├── fifo_mem.vhd
-│   ├── fifo_r_ptr.vhd
-│   ├── fifo_w_ptr.vhd
-│   └── fifo_synchronizer.vhd
-│
-├── uvm/
-│   ├── fifo_env.sv
-│   ├── fifo_if.sv
-│   ├── fifo_pkg.sv
-│   ├── fifo_r_agent.sv
-│   ├── fifo_r_drain_sequence.sv
-│   ├── fifo_r_driver.sv
-│   ├── fifo_r_monitor.sv
-│   ├── fifo_r_sequence.sv
-│   ├── fifo_reset_recovery_test.sv
-│   ├── fifo_scoreboard.sv
-│   ├── fifo_sva.sv
-│   ├── fifo_tb.sv
-│   ├── fifo_test.sv
-│   ├── fifo_top.sv
-│   ├── fifo_transaction.sv
-│   ├── fifo_w_agent.sv
-│   ├── fifo_w_burst_sequence.sv
-│   ├── fifo_w_driver.sv
-│   ├── fifo_w_monitor.sv
-│   └── fifo_w_sequence.sv
-│
-└── sim/
-    ├── run.do
-    ├── run.ps1
-    └── run.bat
-```
+| Directory | Language / Environment | Purpose & Key Contents |
+| :--- | :--- | :--- |
+| **`rtl/`** | VHDL-2008 | Dual-clock FIFO core (`fifo.vhd`), memory array, Gray pointers, and 2FF synchronizers |
+| **`uvm/`** | SystemVerilog (UVM 1.2) | Complete UVM verification suite (Agents, Drivers, Monitors, Sequences, SVA, Scoreboard) |
+| **`sim/`** | TCL / PowerShell / Batch | Automated simulation runner scripts (`run.do`, `run.ps1`, `run.bat`) |
 
 ---
 
@@ -115,9 +83,7 @@ An asynchronous FIFO acts as a temporary queue for transferring data between two
 
 # 3. Clock Domain Crossing (CDC) & Synchronization Architecture
 
-Asynchronous clock domain crossings (CDC) pose two fundamental hardware challenges: **multi-bit pointer skew** and **metastability**. Below is a detailed breakdown of how this FIFO design mitigates both risks.
-
-![Gray Pointer Synchronization](docs/Gray_Pointer_Syncronizer.jpeg)
+Asynchronous clock domain crossings (CDC) pose two fundamental hardware challenges: **multi-bit pointer skew** and **metastability**. Below is a detailed breakdown of how this FIFO design mitigates both risks: Section 3.1 addresses pointer skew via Gray code encoding, and Section 3.2 resolves metastability via dual-stage flip-flop synchronizers.
 
 ---
 
@@ -478,5 +444,5 @@ You can dynamically configure **all 4 simulation parameters** at runtime without
 ### 👨‍💻 Author
 
 **Shlomo Abrams**  
-*Electrical Engineering Student | Digital Design & Verification Enthusiast*  
+*Electrical Engineering Student*  
 [GitHub](https://github.com/ShlomoAbrams)

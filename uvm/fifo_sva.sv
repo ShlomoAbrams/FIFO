@@ -143,7 +143,7 @@ disable iff(!rrst_n)
 rclken |-> (!rempty && rinc)
 );
 
-// 11. Memory management: (write_ptr - synchronized read_ptr) <= DEPTH]. 
+// 11. Write memory management: (write_ptr - synchronized read_ptr) <= DEPTH]. 
 property memory_management;
 	@(posedge wclk) disable iff (!wrst_n)		// Check that write & read pointer aren't out of bounds. 
 												// Uses synchronized read pointer (w2q_rptr_bin), so check is slightly pessimistic but guarantees safety. 
