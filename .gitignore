@@ -20,6 +20,7 @@ __pycache__/
 modelsim.ini
 
 # LaTeX build artifacts & temporary files
+docs/build/
 *.aux
 *.log
 *.synctex.gz
@@ -30,4 +31,18 @@ modelsim.ini
 *.zip
 
 # LinkedIn Files
-/LinkedIn 
+/LinkedIn
+
+# Vivado build artifacts & project garbage
+.Xil/
+*.runs/
+*.cache/
+*.hw/
+*.ip_user_files/
+*.sim/
+*.jou
+*.str
+*.bit
+*.bin
+*.dcp
+*.rpt
