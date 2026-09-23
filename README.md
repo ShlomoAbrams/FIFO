@@ -367,7 +367,8 @@ The verification plan defines **12 distinct coverpoints and crosses** (split bet
 # 6. Waveform Analysis & Simulation Guide
 ![Waveform Simulation](docs/Waveform_Simulation.png)
 ![Waveform Simulation2](docs/Waveform_Simulation2.png)
-![Waveform Simulation](docs/Waveform_Simulation3.png)
+![Waveform Simulation2](docs/Waveform_Simulation3.png)
+
 
 # Waveforms Colors Match Diagram Signals
 ![FIFO Block Diagram](docs/FIFO_Block_Diagram_Black.jpg)
@@ -377,16 +378,23 @@ The verification plan defines **12 distinct coverpoints and crosses** (split bet
 This waveform demonstrates standard FIFO data path operations. Data is written into the memory array (`wdata`) on the write clock domain when `winc` is asserted. It is subsequently read out (`rdata`) on the read clock domain in a First-In-First-Out sequence. The integrity of the data stream (e.g., `A7`, `5A`, `AF`) is preserved perfectly as it crosses the asynchronous boundary.
 
 ![Read & Write Waveform](docs/read_&_write_waveform.png)
+![Read & Write Waveform](docs/read_&_write_waveform2.png)
+![Read & Write Waveform](docs/read_&_write_waveform3.png)
+
 
 ### 2. FIFO Full Condition
 The FIFO asserts `wfull` when the write pointer catches up to the synchronized read pointer. In Gray code, full occurs when pointers are equal with the two Most Significant Bits (MSBs) inverted.
 
 ![FIFO Full Waveform](docs/wfull_waveform.png)
+![FIFO Full Waveform](docs/wfull_waveform2.png)
+
 
 ### 3. FIFO Empty Condition
 The FIFO asserts `rempty` when the read pointer catches up to the synchronized write pointer (all bits match).
 
 ![FIFO Empty Waveform](docs/rempty_waveform.png)
+![FIFO Empty Waveform](docs/rempty_waveform2.png)
+
 
 ### 4. Clock Domain Crossing (CDC) Pointer Traces
 
@@ -394,11 +402,13 @@ The FIFO asserts `rempty` when the read pointer catches up to the synchronized w
 The read Gray pointer crosses into the write domain through the 2FF synchronizer stages (`q1ptr_g` and `q2ptr_g`) before being evaluated for full condition check.
 
 ![Read to Write Sync](docs/r2w_sync_waveform.png)
+![Read to Write Sync](docs/r2w_sync_waveform2.png)
 
 #### Write-to-Read Domain Synchronization
 The write Gray pointer crosses into the read domain through two flip-flop stages before empty condition evaluation.
 
 ![Write to Read Sync](docs/w2r_sync_waveform.png)
+![Write to Read Sync](docs/w2r_sync_waveform2.png)
 
 ---
 
@@ -438,7 +448,7 @@ You can dynamically configure **all 4 simulation parameters** at runtime without
     run.bat fifo_test 5 7 16 5 
     ```
 
-![Automated UVM Test Suite Results](docs/uvm_test_results.png)
+![test results command prompt](docs/test_results_command_prompt.png)
 
 ---
 
@@ -458,7 +468,7 @@ You can dynamically configure **all 4 simulation parameters** at runtime without
    ```
 
 #### ModelSim UVM Simulation Transcript Report:
-![ModelSim UVM Report Summary](docs/modelsim_uvm_test_results.png)
+![test results modelsim](docs/test_results_modelsim.png)
 
 
 ---
