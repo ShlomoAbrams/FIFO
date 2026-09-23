@@ -13,11 +13,11 @@ endmodule
 
 // TOP-LEVEL TESTBENCH MODULE
 module fifo_top #(
-	parameter DUT_DATA_WIDTH = 8,  // Default Data Width: 8 bits
-	parameter DUT_ADDR_WIDTH = 4   // Default Address Width: 4 bits (Depth = 2^4 = 16)
+	parameter DATA_WIDTH = 8,  // Default Data Width: 8 bits
+	parameter ADDR_WIDTH = 4   // Default Address Width: 4 bits (Depth = 2^4 = 16)
 ); 
 
-	// SVA BIND STATEMENT: Binds SystemVerilog Assertions module to the VHDL DUT instance
+	// SVA BIND STATEMENT: Binds SystemVerilog Assertions module to the DUT instance
 	bind fifo fifo_sva #(.DATA_WIDTH(DATA_WIDTH), .ADDR_WIDTH(ADDR_WIDTH)) sva_inst (
 		.wclk(wclk),	
 		.wrst_n	(wrst_n),	
@@ -76,13 +76,13 @@ module fifo_top #(
 	always #(wclk_half_period) wclk = ~wclk;
 	always #(rclk_half_period) rclk = ~rclk;
 
-	// Physical Interface Instantiation (Matches DUT_DATA_WIDTH)
-	fifo_if #(.DATA_WIDTH(DUT_DATA_WIDTH)) p_if (wclk, rclk); // Connect clock signals to interface bundle
+	// Physical Interface Instantiation (Matches DATA_WIDTH)
+	fifo_if #(.DATA_WIDTH(DATA_WIDTH)) p_if (wclk, rclk); // Connect clock signals to interface bundle
 
-	// DUT (Design Under Test) VHDL Top Instantiation
+	// DUT (Design Under Test) Top Instantiation
 	fifo #(
-		.DATA_WIDTH(DUT_DATA_WIDTH),
-		.ADDR_WIDTH(DUT_ADDR_WIDTH)
+		.DATA_WIDTH(DATA_WIDTH),
+		.ADDR_WIDTH(ADDR_WIDTH)
 	) dut (
 		.wclk	(p_if.wclk),	// Connect write clock to DUT
 		.wrst_n	(p_if.wrst_n),	// Connect write reset to DUT
@@ -107,11 +107,11 @@ module fifo_top #(
 	end
 
 	initial begin // UVM STARTUP & CONFIG DATABASE SETUP
-		// FACTORY REGISTRATION: Maps +UVM_TESTNAME string flags directly to specialized test classes matching DUT_DATA_WIDTH
-		typedef uvm_component_registry#(fifo_test#(DUT_DATA_WIDTH), "fifo_test") fifo_test_reg;
-		typedef uvm_component_registry#(fifo_reset_recovery_test#(DUT_DATA_WIDTH), "fifo_reset_recovery_test") fifo_reset_recovery_test_reg;
+		// FACTORY REGISTRATION: Maps +UVM_TESTNAME string flags directly to specialized test classes matching DATA_WIDTH
+		typedef uvm_component_registry#(fifo_test#(DATA_WIDTH), "fifo_test") fifo_test_reg;
+		typedef uvm_component_registry#(fifo_reset_recovery_test#(DATA_WIDTH), "fifo_reset_recovery_test") fifo_reset_recovery_test_reg;
 
-		uvm_config_db#(virtual fifo_if #(.DATA_WIDTH(DUT_DATA_WIDTH)))::set(null, "*", "vif", p_if); // Publish virtual interface into UVM configuration database so driver, monitor, and scbd can retrieve it
+		uvm_config_db#(virtual fifo_if #(.DATA_WIDTH(DATA_WIDTH)))::set(null, "*", "vif", p_if); // Publish virtual interface into UVM configuration database so driver, monitor, and scbd can retrieve it
 		run_test(); // Start UVM test specified by +UVM_TESTNAME flag
 	end
 endmodule

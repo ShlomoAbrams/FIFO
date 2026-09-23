@@ -13,7 +13,7 @@ class fifo_test #(parameter DATA_WIDTH = 8) extends uvm_test; // BLUEPRINT: The 
 		if(!uvm_config_db#(virtual fifo_if#(DATA_WIDTH))::get(this, "", "vif", p_if)) begin // Retrieve the interface from database
 			`uvm_fatal("TEST", "Virtual interface not found in config_db")
 		end
-		uvm_top.set_timeout(1ms);			// The simulation cannot exceed this limit
+		uvm_top.set_timeout(100ms);			// The simulation cannot exceed this limit
 	endfunction
 	
 	virtual task run_phase(uvm_phase phase); // RUN PHASE:

@@ -356,14 +356,19 @@ The verification plan defines **12 distinct coverpoints and crosses** (split bet
 
 ### ModelSim Coverage Dashboard
 ![Coverage Report Summary](docs/coverage.png)
+![Coverage Report Summary2](docs/coverage2.png)
 
 ### Detailed Design Units Coverage Breakdown
 ![Detailed Design Units Coverage](docs/coverage_details.png)
+![Detailed Design Units Coverage](docs/coverage_details2.png)
 
 ---
 
 # 6. Waveform Analysis & Simulation Guide
 ![Waveform Simulation](docs/Waveform_Simulation.png)
+![Waveform Simulation2](docs/Waveform_Simulation2.png)
+![Waveform Simulation](docs/Waveform_Simulation3.png)
+
 # Waveforms Colors Match Diagram Signals
 ![FIFO Block Diagram](docs/FIFO_Block_Diagram_Black.jpg)
 
@@ -408,20 +413,32 @@ You can dynamically configure **all 4 simulation parameters** at runtime without
 
 ---
 
-### Option 1: Automated Test Runner (Command Line - Quiet Mode)
+### Option 1: Automated Test Runner
 
 1. Open terminal and navigate to your `sim` directory:
    ```bash
    cd sim
    ```
-2. Run simulation with default or custom parameters:
-   ```powershell
-   # 1. Run basic test suite (default settings)
-   .\run.ps1
+2. Run **default** simulation:
+  * **PowerShell:**
+    ```powershell
+    .\run.ps1
+    ```
+  * **Command Prompt:**
+    ```cmd
+    run.bat
+    ```
+3. Run **custom** simulation:
+  * **PowerShell:**
+    ```powershell
+    .\run.ps1 -TestName fifo_reset_recovery_test -Wclk 5 -Rclk 7 -DataWidth 16 -AddrWidth 5
+    ```
+  * **Command Prompt:**
+    ```cmd
+    run.bat fifo_test 5 7 16 5 
+    ```
 
-   # 2. Custom Parameters Run
-   .\run.ps1 -TestName fifo_reset_recovery_test -Wclk 2 -Rclk 10 -DataWidth 16 -AddrWidth 5
-   ```
+![Automated UVM Test Suite Results](docs/uvm_test_results.png)
 
 ---
 
@@ -431,14 +448,18 @@ You can dynamically configure **all 4 simulation parameters** at runtime without
    ```bash
    cd sim
    ```
-2. Run simulation with default or custom parameters:
+2. Run default simulation:
    ```bash
-   # 1. Run basic test (default settings)
    do run.do
-
-   # 2. Custom Parameters Run
+   ```
+3. Run custom simulation with custom parameters:
+   ```bash
    set TESTNAME fifo_reset_recovery_test; set WCLK_HALF 2; set RCLK_HALF 10; set DATA_WIDTH 5; set ADDR_WIDTH 5; do run.do
    ```
+
+#### ModelSim UVM Simulation Transcript Report:
+![ModelSim UVM Report Summary](docs/modelsim_uvm_test_results.png)
+
 
 ---
 ### 👨‍💻 Author
