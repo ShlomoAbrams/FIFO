@@ -13,14 +13,16 @@ module basys3_fifo_top (
     // JB1..JB4, JB7..JB10
     output wire [7:0] jb,
 
-    // PMOD JC: Control & Status Flags
+    // PMOD JC: Control Clocks, Resets & Status Flags
+    // Top Row (Enables & Resets):
     input  wire       jc_winc,    // JC1  (Pin K17) - Write increment
-    input  wire       jc_wclk,    // JC2  (Pin M18) - Write clock from RPi
-    input  wire       jc_wrst_n,  // JC3  (Pin N17) - Write reset (active low)
-    output wire       jc_wfull,   // JC4  (Pin P18) - FIFO Full flag
-    input  wire       jc_rinc,    // JC7  (Pin L17) - Read increment
+    input  wire       jc_rinc,    // JC2  (Pin M18) - Read increment
+    input  wire       jc_wrst_n,  // JC3  (Pin N17) - Write reset (active-low)
+    input  wire       jc_rrst_n,  // JC4  (Pin P18) - Read reset (active-low)
+    // Bottom Row (Clocks & Flags):
+    input  wire       jc_wclk,    // JC7  (Pin L17) - Write clock from RPi
     input  wire       jc_rclk,    // JC8  (Pin M19) - Read clock from RPi
-    input  wire       jc_rrst_n,  // JC9  (Pin P17) - Read reset (active low)
+    output wire       jc_wfull,   // JC9  (Pin P17) - FIFO Full flag
     output wire       jc_rempty,  // JC10 (Pin R18) - FIFO Empty flag
 
     // On-board Push Button (Center button BTNC: Active-high when pressed)
@@ -39,18 +41,21 @@ module basys3_fifo_top (
     wire [7:0] uio_oe_bus;
     wire [7:0] rdata_bus;
 
-    // Map JC control inputs into the Tiny Tapeout uio_in bus
+    // Map PMOD JC into the contiguous Tiny Tapeout uio_in bus:
+    // uio[0] = winc, uio[1] = rinc, uio[2] = wrst_n, uio[3] = rrst_n
+    // uio[4] = wclk, uio[5] = rclk
     assign uio_in_bus[0] = jc_winc;
-    assign uio_in_bus[1] = jc_wclk;
+    assign uio_in_bus[1] = jc_rinc;
     assign uio_in_bus[2] = jc_wrst_n;
-    assign uio_in_bus[3] = 1'b0;      // Pin 3 is output (wfull)
-    assign uio_in_bus[4] = jc_rinc;
+    assign uio_in_bus[3] = jc_rrst_n;
+    assign uio_in_bus[4] = jc_wclk;
     assign uio_in_bus[5] = jc_rclk;
-    assign uio_in_bus[6] = jc_rrst_n;
+    assign uio_in_bus[6] = 1'b0;      // Pin 6 is output (wfull)
     assign uio_in_bus[7] = 1'b0;      // Pin 7 is output (rempty)
 
-    // Extract outputs from Tiny Tapeout uio_out bus
-    assign jc_wfull  = uio_out_bus[3];
+    // Extract outputs from Tiny Tapeout uio_out bus:
+    // uio[6] = wfull, uio[7] = rempty
+    assign jc_wfull  = uio_out_bus[6];
     assign jc_rempty = uio_out_bus[7];
 
     // Connect PMOD JB to Read Data

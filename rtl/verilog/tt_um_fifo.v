@@ -1,63 +1,76 @@
-// Tiny Tapeout Top Wrapper for Asynchronous Dual-Clock FIFO
-// Maps the 8-bit Data and Dual-Clock Control signals to Tiny Tapeout standard pins
+// Tiny Tapeout User Module (tt_um) - Top Wrapper for Asynchronous Dual-Clock FIFO (24-pin socket)
 
-`default_nettype none
+//   - ui_in   : 8 inputs
+//   - uo_out  : 8 outputs
+//   - uio     : 8 bidirectional I/Os (input, output, and output-enable)
+//   - "u" prefix      : User signal (ui = User Input, uo = User Output, uio = User I/O)
+
+
+`default_nettype none // Disables implicit wire creation. Catches typos at compile-time instead of creating silent ASIC bugs!
 
 module tt_um_fifo (
-    input  wire [7:0] ui_in,    // Dedicated inputs:  wdata[7:0]
-    output wire [7:0] uo_out,   // Dedicated outputs: rdata[7:0]
-    input  wire [7:0] uio_in,   // IOs: Input path
-    output wire [7:0] uio_out,  // IOs: Output path
-    output wire [7:0] uio_oe,   // IOs: Enable path (active high: 0=input, 1=output)
-    input  wire       ena,      // Will go high when design is enabled
-    input  wire       clk,      // System clock (can be used as default clock)
-    input  wire       rst_n     // Global reset (active low)
+    input  wire [7:0] ui_in,    // Dedicated user inputs:  Connected directly to wdata[7:0]
+    output wire [7:0] uo_out,   // Dedicated user outputs: Connected directly to rdata[7:0]
+    input  wire [7:0] uio_in,   // User I/O(Bidirectional): Input path from pad cells
+    output wire [7:0] uio_out,  // User I/O(Bidirectional): Output path to pad cells
+    output wire [7:0] uio_oe,   // User I/O(Bidirectional): Output Enable (1 = Output driver active, 0 = Input / Hi-Z)
+    input  wire       ena,      // Chip enable (high when this specific project tile is selected on the chip)
+    input  wire       clk,      // Default system clock pin (unused here because FIFO is dual-clock)
+    input  wire       rst_n     // Global hardware reset (active-low)
 );
 
-    // Pin Mapping Strategy:
-    // -------------------------------------------------------------
-    // ui_in[7:0]   : Write Data (wdata[7:0])
-    // uo_out[7:0]  : Read Data  (rdata[7:0])
-    //
-    // Bidirectional IOs:
-    // uio[0] (in)  : winc   (Write Increment / Enable)
-    // uio[1] (in)  : wclk   (Write Clock from RPi / external tester)
-    // uio[2] (in)  : wrst_n (Write Domain Reset, combined with global rst_n)
-    // uio[3] (out) : wfull  (FIFO Full flag)
-    // uio[4] (in)  : rinc   (Read Increment / Enable)
-    // uio[5] (in)  : rclk   (Read Clock from RPi / external tester)
-    // uio[6] (in)  : rrst_n (Read Domain Reset, combined with global rst_n)
-    // uio[7] (out) : rempty (FIFO Empty flag)
-    // -------------------------------------------------------------
+    // 1. Pin Mapping Strategy:
+    // ui_in[7:0]   : Write Data  (wdata[7:0])
+    // uo_out[7:0]  : Read Data   (rdata[7:0])
+    // Bidirectional IOs (PMOD JC / RPi Pins):
+    // uio[0] (in)  : winc   (Write Increment / Enable from external tester)
+    // uio[1] (in)  : rinc   (Read Increment / Enable from external tester)
+    // uio[2] (in)  : wrst_n (Write Domain Reset, active-low)
+    // uio[3] (in)  : rrst_n (Read Domain Reset, active-low)
+    // uio[4] (in)  : wclk   (Write Clock from RPi / external oscillator)
+    // uio[5] (in)  : rclk   (Read Clock from RPi / external oscillator)
+    // uio[6] (out) : wfull  (FIFO Full flag to external tester & LED)
+    // uio[7] (out) : rempty (FIFO Empty flag to external tester & LED)
 
-    // Direction control: pins 3 and 7 are outputs (1), all other pins are inputs (0)
-    assign uio_oe = 8'b1000_1000;
+    // 2. Physical Tri-State Pad Direction Control (uio_oe)
+    // In physical silicon, each bidirectional pad has a tri-state output driver. uio_oe physically gates that driver:
+    // 1 = Drive output out to physical pin, 0 = Turn driver off into High-Impedance (Hi-Z) mode to safely accept inputs
+    
+    assign uio_oe = 8'b1100_0000;
 
-    // Internal signals
+    // 3. Control Signal Unpacking & Active-Low Reset Logic (De Morgan's Law)
     wire winc   = uio_in[0];
-    wire wclk_i = uio_in[1];
-    wire wrst_i = rst_n & uio_in[2];
-    wire wfull_o;
+    wire rinc   = uio_in[1];
 
-    wire rinc   = uio_in[4];
-    wire rclk_i = uio_in[5];
-    wire rrst_i = rst_n & uio_in[6];
+    // Active-Low Reset: '0' = Reset active, '1' = Normal operation.
+    // By De Morgan's Law (not(A) or not(B) == not(A and B)), an AND gate on active-low
+    // signals acts as an OR gate:
+    //   - If EITHER global rst_n is pulled low (0) OR domain reset uio_in[2]/[3] is low (0),
+    //     the internal reset goes low (0) and resets the domain immediately!
+    wire wrst_i = rst_n & uio_in[2];
+    wire rrst_i = rst_n & uio_in[3];
+
+    wire wclk_i = uio_in[4]; // Write clock routed into tile; CTS builds balanced buffer tree
+    wire rclk_i = uio_in[5]; // Read clock routed into tile; CTS builds balanced buffer tree
+
+    wire wfull_o;
     wire rempty_o;
 
-    // Drive bidirectional outputs (unused output drivers tied to 0)
+    // 3. Drive Bidirectional Output Pins - Pins 6 & 7 output the status flags; all unused output drivers are tied to 0.
     assign uio_out[0] = 1'b0;
     assign uio_out[1] = 1'b0;
     assign uio_out[2] = 1'b0;
-    assign uio_out[3] = wfull_o;
+    assign uio_out[3] = 1'b0;
     assign uio_out[4] = 1'b0;
     assign uio_out[5] = 1'b0;
-    assign uio_out[6] = 1'b0;
+    assign uio_out[6] = wfull_o;
     assign uio_out[7] = rempty_o;
 
-    // Suppress unused input warning for Tiny Tapeout linting
+    // 4. Suppress Unused Input Lint Warnings - Because this is an asynchronous dual-clock design, it uses wclk_i and rclk_i
+    // rather than the single default 'clk'. ASIC linters (OpenLane / Verilator) flag unused top ports. This reduction-AND satisfies the linter cleanly.
     wire _unused = &{ena, clk, 1'b0};
 
-    // Instantiate Parameterized Asynchronous FIFO (8-bit data, 16-entry depth)
+    // 5. Instantiate Core Parameterized Asynchronous Dual-Clock FIFO
     fifo #(
         .DATA_WIDTH(8),
         .ADDR_WIDTH(4)
@@ -67,14 +80,13 @@ module tt_um_fifo (
         .wrst_n (wrst_i),
         .winc   (winc),
         .wfull  (wfull_o),
-        .wdata  (ui_in),
-
+        .wdata  (ui_in),    
         // Read Domain
         .rclk   (rclk_i),
         .rrst_n (rrst_i),
         .rinc   (rinc),
         .rempty (rempty_o),
-        .rdata  (uo_out)
+        .rdata  (uo_out)   
     );
 
 endmodule
