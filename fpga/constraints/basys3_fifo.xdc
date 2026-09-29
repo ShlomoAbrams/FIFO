@@ -5,8 +5,8 @@
 ## 1. Clocks & Clock Routing (Asymmetric Dual-Clock STA Constraints)
 ## =====================================================================
 # Because wclk and rclk enter through PMOD GPIO pins, allow standard routing:
-set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets jc_wclk_IBUF]
-set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets jc_rclk_IBUF]
+set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets -of_objects [get_ports jc_wclk]]
+set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets -of_objects [get_ports jc_rclk]]
 
 # Write clock: 50 MHz (20.0 ns period)
 create_clock -period 20.000 -name wclk [get_ports jc_wclk]
