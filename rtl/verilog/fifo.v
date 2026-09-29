@@ -1,13 +1,10 @@
-// Top-Level Asynchronous Dual-Clock FIFO
-// Parameterized DATA_WIDTH and ADDR_WIDTH
-// Connects Dual-Port Memory, Write/Read Pointer Logic, and 2FF Synchronizers
+// Top-Level Asynchronous FIFO - Connects Memory, Pointers & Synchronizers
+// Parameterized DATA_WIDTH & ADDR_WIDTH
 
 `timescale 1ns / 1ps
 
-module fifo #(
-    parameter DATA_WIDTH = 8,
-    parameter ADDR_WIDTH = 4
-)(
+module fifo #(parameter DATA_WIDTH = 8, parameter ADDR_WIDTH = 4)
+(
     // Write Domain
     input  wire                  wclk,
     input  wire                  wrst_n,
@@ -44,10 +41,8 @@ module fifo #(
     assign rclken_wire = rinc & ~rempty_wire;
 
     // 1. Dual-Port Storage Memory
-    fifo_mem #(
-        .DATA_WIDTH(DATA_WIDTH),
-        .ADDR_WIDTH(ADDR_WIDTH)
-    ) fifo_mem_unit (
+    fifo_mem #(.DATA_WIDTH(DATA_WIDTH),.ADDR_WIDTH(ADDR_WIDTH)) 
+    fifo_mem_unit (
         .wclk   (wclk),
         .wclken (wclken_wire),
         .waddr  (waddr_wire),
@@ -59,9 +54,8 @@ module fifo #(
     );
 
     // 2. Write Pointer and Full Flag Logic (wclk domain)
-    fifo_w_ptr #(
-        .ADDR_WIDTH(ADDR_WIDTH)
-    ) wptr_full_unit (
+    fifo_w_ptr #(.ADDR_WIDTH(ADDR_WIDTH)) 
+    wptr_full_unit (
         .wclk     (wclk),
         .wrst_n   (wrst_n),
         .winc     (winc),
@@ -72,9 +66,8 @@ module fifo #(
     );
 
     // 3. Read Pointer and Empty Flag Logic (rclk domain)
-    fifo_r_ptr #(
-        .ADDR_WIDTH(ADDR_WIDTH)
-    ) rptr_empty_unit (
+    fifo_r_ptr #(.ADDR_WIDTH(ADDR_WIDTH)) 
+    rptr_empty_unit (
         .rclk     (rclk),
         .rrst_n   (rrst_n),
         .rinc     (rinc),
@@ -85,9 +78,8 @@ module fifo #(
     );
 
     // 4. Write Pointer Synchronizer: Synchronizes wptr_wire into rclk domain
-    fifo_synchronizer #(
-        .ADDR_WIDTH(ADDR_WIDTH)
-    ) write_to_read_sync (
+    fifo_synchronizer #(.ADDR_WIDTH(ADDR_WIDTH)) 
+    write_to_read_sync (
         .clk     (rclk),
         .rst_n   (rrst_n),
         .ptr_g   (wptr_wire),
@@ -95,9 +87,8 @@ module fifo #(
     );
 
     // 5. Read Pointer Synchronizer: Synchronizes rptr_wire into wclk domain
-    fifo_synchronizer #(
-        .ADDR_WIDTH(ADDR_WIDTH)
-    ) read_to_write_sync (
+    fifo_synchronizer #(.ADDR_WIDTH(ADDR_WIDTH)) 
+    read_to_write_sync (
         .clk     (wclk),
         .rst_n   (wrst_n),
         .ptr_g   (rptr_wire),

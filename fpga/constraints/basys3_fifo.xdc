@@ -22,10 +22,12 @@ set_clock_groups -asynchronous \
 ## =====================================================================
 ## 2. PMOD JA: 8-bit Write Data Bus (wdata[7:0] - Inputs from RPi)
 ## =====================================================================
+# Top Row:
 set_property -dict {PACKAGE_PIN J1 IOSTANDARD LVCMOS33} [get_ports {ja[0]}]; # JA1
 set_property -dict {PACKAGE_PIN L2 IOSTANDARD LVCMOS33} [get_ports {ja[1]}]; # JA2
 set_property -dict {PACKAGE_PIN J2 IOSTANDARD LVCMOS33} [get_ports {ja[2]}]; # JA3
 set_property -dict {PACKAGE_PIN G2 IOSTANDARD LVCMOS33} [get_ports {ja[3]}]; # JA4
+# Bottom Row:
 set_property -dict {PACKAGE_PIN H1 IOSTANDARD LVCMOS33} [get_ports {ja[4]}]; # JA7
 set_property -dict {PACKAGE_PIN K2 IOSTANDARD LVCMOS33} [get_ports {ja[5]}]; # JA8
 set_property -dict {PACKAGE_PIN H2 IOSTANDARD LVCMOS33} [get_ports {ja[6]}]; # JA9
@@ -34,10 +36,12 @@ set_property -dict {PACKAGE_PIN G3 IOSTANDARD LVCMOS33} [get_ports {ja[7]}]; # J
 ## =====================================================================
 ## 3. PMOD JB: 8-bit Read Data Bus (rdata[7:0] - Outputs to RPi)
 ## =====================================================================
+# Top Row:
 set_property -dict {PACKAGE_PIN A14 IOSTANDARD LVCMOS33} [get_ports {jb[0]}]; # JB1
 set_property -dict {PACKAGE_PIN A16 IOSTANDARD LVCMOS33} [get_ports {jb[1]}]; # JB2
 set_property -dict {PACKAGE_PIN B15 IOSTANDARD LVCMOS33} [get_ports {jb[2]}]; # JB3
 set_property -dict {PACKAGE_PIN B16 IOSTANDARD LVCMOS33} [get_ports {jb[3]}]; # JB4
+# Bottom Row:
 set_property -dict {PACKAGE_PIN A15 IOSTANDARD LVCMOS33} [get_ports {jb[4]}]; # JB7
 set_property -dict {PACKAGE_PIN A17 IOSTANDARD LVCMOS33} [get_ports {jb[5]}]; # JB8
 set_property -dict {PACKAGE_PIN C15 IOSTANDARD LVCMOS33} [get_ports {jb[6]}]; # JB9

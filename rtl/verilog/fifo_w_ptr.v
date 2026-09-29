@@ -1,11 +1,9 @@
-// Write Pointer & Full Flag Generation Logic
-// Increments binary write pointer, converts to Gray code, and evaluates Full condition
+// Write Pointer (Binary & Gray) & Full Flag
 
 `timescale 1ns / 1ps
 
-module fifo_w_ptr #(
-    parameter ADDR_WIDTH = 4
-)(
+module fifo_w_ptr #(parameter ADDR_WIDTH = 4)
+(
     input  wire                  wclk,
     input  wire                  wrst_n,
     input  wire                  winc,
@@ -27,13 +25,12 @@ module fifo_w_ptr #(
     assign waddr = wptr_b_cur[ADDR_WIDTH-1:0];
 
     // Increment binary pointer only if write enable is asserted and FIFO is not full
-    assign wptr_b_next = (winc && !wfull) ? (wptr_b_cur + 1'b1) : wptr_b_cur;
+    assign wptr_b_next = (winc && !wfull) ? (wptr_b_cur + 1'b1) : wptr_b_cur; // (condition) ? (value_if_true) : (value_if_false), which synthesizes to a 2-to-1 MUX
 
     // Binary to Gray conversion: G = B ^ (B >> 1)
     assign wptr_g_next = wptr_b_next ^ (wptr_b_next >> 1);
 
-    // Full condition check:
-    // FIFO is full when top 2 Gray bits are inverted, and lower (ADDR_WIDTH-1) bits match
+    // Full check: FIFO is full when top 2 Gray bits are inverted, and lower bits match
     assign wfull_next = (wptr_g_next[ADDR_WIDTH]   != w2q_rptr[ADDR_WIDTH]) &&
                         (wptr_g_next[ADDR_WIDTH-1] != w2q_rptr[ADDR_WIDTH-1]) &&
                         (wptr_g_next[ADDR_WIDTH-2:0] == w2q_rptr[ADDR_WIDTH-2:0]);

@@ -8,43 +8,52 @@ This script runs on a Raspberry Pi connected via jumper wires to a Digilent Basy
 FPGA running the Asynchronous FIFO bitstream.
 
 WIRING TABLE (Raspberry Pi 40-Pin Header <---> Basys 3 PMOD Headers):
+Parallel Rails Layout (JA -> JC -> JB, with USB ports oriented at TOP):
+- OUTER ROW (Even pins 2..40: LEFT column / outer board edge): 5-wire bundles (Signals + GND)
+- INNER ROW (Odd pins 1..39: RIGHT column / toward CPU): 4-wire bundles (Signals only)
+- Orientation: Top = USB Ports (Pins 39/40), Bottom = MicroSD Slot (Pins 1/2)
+- Zone Order: Top = PMOD JB (Read Bus), Middle = PMOD JC (Clocks/Flags), Bottom = PMOD JA (Write Bus)
 --------------------------------------------------------------------------------
-Signal Name | Direction (from RPi) | RPi BCM GPIO | RPi Physical Pin | Basys 3 PMOD Pin
+Signal Name | Direction (from RPi) | Wire Color | RPi BCM GPIO | RPi Physical Pin | Basys 3 PMOD Pin
 --------------------------------------------------------------------------------
-COMMON GROUND (MANDATORY):
-GND         | Reference            | GND          | Pin 6, 9, or 14  | PMOD JC Pin 5 or 11
+PMOD JB: Read Data Bus (rdata[7:0] - RPi Inputs from FPGA) [Top Zone]
+-- JB Top (5-wire bundle: Pins 40, 38, 36, 34[GND], 32) --
+rdata[0]    | Input                | Black      | GPIO 21      | Pin 40           | JB1 (A14)
+rdata[1]    | Input                | White      | GPIO 20      | Pin 38           | JB2 (A16)
+rdata[2]    | Input                | Gray       | GPIO 16      | Pin 36           | JB3 (B15)
+GND         | Ground Reference     | Blue       | GND          | Pin 34           | JB5 (GND)
+rdata[3]    | Input                | Purple     | GPIO 12      | Pin 32           | JB4 (B16)
+-- JB Bottom (4-wire bundle: Pins 35, 33, 31, 29) --
+rdata[4]    | Input                | Brown      | GPIO 19      | Pin 35           | JB7 (A15)
+rdata[5]    | Input                | Red        | GPIO 13      | Pin 33           | JB8 (A17)
+rdata[6]    | Input                | Orange     | GPIO 6       | Pin 31           | JB9 (C15)
+rdata[7]    | Input                | Yellow     | GPIO 5       | Pin 29           | JB10 (C16)
 --------------------------------------------------------------------------------
-PMOD JA: Write Data Bus (wdata[7:0] - RPi Outputs to FPGA)
-wdata[0]    | Output               | GPIO 2       | Pin 3            | JA1 (J1)
-wdata[1]    | Output               | GPIO 3       | Pin 5            | JA2 (L2)
-wdata[2]    | Output               | GPIO 4       | Pin 7            | JA3 (J2)
-wdata[3]    | Output               | GPIO 14      | Pin 8            | JA4 (G2)
-wdata[4]    | Output               | GPIO 15      | Pin 10           | JA7 (H1)
-wdata[5]    | Output               | GPIO 17      | Pin 11           | JA8 (K2)
-wdata[6]    | Output               | GPIO 18      | Pin 12           | JA9 (H2)
-wdata[7]    | Output               | GPIO 27      | Pin 13           | JA10 (G3)
+PMOD JC: Control Clocks, Resets & Flags [Middle Zone]
+-- JC Top Row (5-wire bundle: Pins 26, 24, 22, 20[GND], 18) --
+winc        | Output (Write Enable)| Black      | GPIO 7       | Pin 26           | JC1 (K17)
+rinc        | Output (Read Enable) | White      | GPIO 8       | Pin 24           | JC2 (M18)
+wrst_n      | Output (Write Reset) | Gray       | GPIO 25      | Pin 22           | JC3 (N17)
+GND         | Ground Reference     | Blue       | GND          | Pin 20           | JC5 (GND)
+rrst_n      | Output (Read Reset)  | Purple     | GPIO 24      | Pin 18           | JC4 (P18)
+-- JC Bottom Row (4-wire bundle: Pins 21, 19, 15, 13) --
+wclk        | Output (Write Clock) | Brown      | GPIO 9       | Pin 21           | JC7 (L17)
+rclk        | Output (Read Clock)  | Red        | GPIO 10      | Pin 19           | JC8 (M19)
+wfull       | Input (Full Flag)    | Orange     | GPIO 22      | Pin 15           | JC9 (P17)
+rempty      | Input (Empty Flag)   | Yellow     | GPIO 27      | Pin 13           | JC10 (R18)
 --------------------------------------------------------------------------------
-PMOD JB: Read Data Bus (rdata[7:0] - RPi Inputs from FPGA)
-rdata[0]    | Input                | GPIO 22      | Pin 15           | JB1 (A14)
-rdata[1]    | Input                | GPIO 23      | Pin 16           | JB2 (A16)
-rdata[2]    | Input                | GPIO 24      | Pin 18           | JB3 (B15)
-rdata[3]    | Input                | GPIO 10      | Pin 19           | JB4 (B16)
-rdata[4]    | Input                | GPIO 9       | Pin 21           | JB7 (A15)
-rdata[5]    | Input                | GPIO 25      | Pin 22           | JB8 (A17)
-rdata[6]    | Input                | GPIO 11      | Pin 23           | JB9 (C15)
-rdata[7]    | Input                | GPIO 8       | Pin 24           | JB10 (C16)
---------------------------------------------------------------------------------
-PMOD JC: Control Clocks, Resets & Flags
-Top Row (Enables & Resets):
-winc        | Output               | GPIO 7       | Pin 26           | JC1 (K17)
-rinc        | Output               | GPIO 13      | Pin 33           | JC2 (M18)
-wrst_n      | Output               | GPIO 6       | Pin 31           | JC3 (N17)
-rrst_n      | Output               | GPIO 26      | Pin 37           | JC4 (P18)
-Bottom Row (Clocks & Flags):
-wclk        | Output               | GPIO 5       | Pin 29           | JC7 (L17)
-rclk        | Output               | GPIO 19      | Pin 35           | JC8 (M19)
-wfull       | Input                | GPIO 12      | Pin 32           | JC9 (P17)
-rempty      | Input                | GPIO 16      | Pin 36           | JC10 (R18)
+PMOD JA: Write Data Bus (wdata[7:0] - RPi Outputs to FPGA) [Bottom Zone]
+-- JA Top (5-wire bundle: Pins 16, 14[GND], 12, 10, 8) --
+wdata[0]    | Output               | Black      | GPIO 23      | Pin 16           | JA1 (J1)
+GND         | Ground Reference     | Blue       | GND          | Pin 14           | JA5 (GND)
+wdata[1]    | Output               | White      | GPIO 18      | Pin 12           | JA2 (L2)
+wdata[2]    | Output               | Gray       | GPIO 15      | Pin 10           | JA3 (J2)
+wdata[3]    | Output               | Purple     | GPIO 14      | Pin 8            | JA4 (G2)
+-- JA Bottom (4-wire bundle: Pins 11, 7, 5, 3) --
+wdata[4]    | Output               | Brown      | GPIO 17      | Pin 11           | JA7 (H1)
+wdata[5]    | Output               | Red        | GPIO 4       | Pin 7            | JA8 (K2)
+wdata[6]    | Output               | Orange     | GPIO 3       | Pin 5            | JA9 (H2)
+wdata[7]    | Output               | Yellow     | GPIO 2       | Pin 3            | JA10 (G3)
 ================================================================================
 """
 
@@ -61,22 +70,30 @@ except (ImportError, RuntimeError):
 
 
 # ==============================================================================
-# Pin Definitions (Broadcom / BCM Numbering)
+# Pin Definitions (Broadcom / BCM Numbering) - Clean Parallel Rails (JB -> JC -> JA)
 # ==============================================================================
-PIN_WDATA  = [2, 3, 4, 14, 15, 17, 18, 27]   # wdata[0..7] (Outputs)
-PIN_RDATA  = [22, 23, 24, 10, 9, 25, 11, 8]  # rdata[0..7] (Inputs)
+# PMOD JB: Read Data Bus (Top Zone, near Pin 40)
+# JB Top (5-wire bundle with GND): Pins 40, 38, 36, 32 (GND on Pin 34)
+# JB Bottom (4-wire bundle): Pins 35, 33, 31, 29
+PIN_RDATA  = [21, 20, 16, 12, 19, 13, 6, 5]   # rdata[0..7]
 
-# PMOD JC Top Row: Enables & Resets
-PIN_WINC   = 7    # JC1: Write enable (Output)
-PIN_RINC   = 13   # JC2: Read enable (Output)
-PIN_WRST_N = 6    # JC3: Write reset, active-low (Output)
-PIN_RRST_N = 26   # JC4: Read reset, active-low (Output)
+# PMOD JC: Control, Resets & Clocks (Middle Zone)
+# JC Top (5-wire bundle with GND): Pins 26, 24, 22, 18 (GND on Pin 20)
+PIN_WINC   = 7    # JC1: Pin 26 (GPIO 7)
+PIN_RINC   = 8    # JC2: Pin 24 (GPIO 8)
+PIN_WRST_N = 25   # JC3: Pin 22 (GPIO 25)
+PIN_RRST_N = 24   # JC4: Pin 18 (GPIO 24)
 
-# PMOD JC Bottom Row: Clocks & Status Flags
-PIN_WCLK   = 5    # JC7: Write clock (Output)
-PIN_RCLK   = 19   # JC8: Read clock (Output)
-PIN_WFULL  = 12   # JC9: Full flag (Input)
-PIN_REMPTY = 16   # JC10: Empty flag (Input)
+# PMOD JC Bottom Row: Clocks & Status Flags (4-wire bundle: Pins 21, 19, 15, 13)
+PIN_WCLK   = 9    # JC7:  Pin 21 (GPIO 9)
+PIN_RCLK   = 10   # JC8:  Pin 19 (GPIO 10)
+PIN_WFULL  = 22   # JC9:  Pin 15 (GPIO 22)
+PIN_REMPTY = 27   # JC10: Pin 13 (GPIO 27)
+
+# PMOD JA: Write Data Bus (Bottom Zone, near Pin 1)
+# JA Top (5-wire bundle with GND): Pins 16, 12, 10, 8 (GND on Pin 14)
+# JA Bottom (4-wire bundle): Pins 11, 7, 5, 3
+PIN_WDATA  = [23, 18, 15, 14, 17, 4, 3, 2]  # wdata[0..7]
 
 
 # ==============================================================================
