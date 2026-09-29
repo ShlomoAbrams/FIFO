@@ -138,9 +138,10 @@ class MockFIFO:
 # Hardware Controller Class
 # ==============================================================================
 class FIFOTester:
-    def __init__(self, mock=False, clock_delay=0.0001):
+    def __init__(self, mock=False, clock_delay=0.0001, step_delay=0.5):
         self.mock = mock
         self.clock_delay = clock_delay  # Half-period delay (seconds)
+        self.step_delay = step_delay    # Visual pause between bytes for LEDs (seconds)
 
         if self.mock:
             print("[INFO] Initialized in MOCK simulation mode (no hardware required).")
@@ -213,12 +214,12 @@ class FIFOTester:
             GPIO.output(PIN_RRST_N, GPIO.LOW)
             GPIO.output(PIN_WINC, GPIO.LOW)
             GPIO.output(PIN_RINC, GPIO.LOW)
-            for _ in range(3):
+            for _ in range(4):
                 self.pulse_wclk()
                 self.pulse_rclk()
             GPIO.output(PIN_WRST_N, GPIO.HIGH)
             GPIO.output(PIN_RRST_N, GPIO.HIGH)
-            for _ in range(3):
+            for _ in range(4):
                 self.pulse_wclk()
                 self.pulse_rclk()
 
@@ -237,6 +238,8 @@ class FIFOTester:
             GPIO.output(PIN_WINC, GPIO.HIGH)
             self.pulse_wclk()
             GPIO.output(PIN_WINC, GPIO.LOW)
+        if self.step_delay > 0:
+            time.sleep(self.step_delay)
 
     def read_byte(self):
         """Pulses rinc, clocks rclk, and reads rdata bus."""
@@ -244,7 +247,7 @@ class FIFOTester:
             self.sim.rinc = 1
             self.sim.tick_read()
             self.sim.rinc = 0
-            return self.sim.rdata
+            val = self.sim.rdata
         else:
             GPIO.output(PIN_RINC, GPIO.HIGH)
             self.pulse_rclk()
@@ -254,7 +257,9 @@ class FIFOTester:
             for i in range(8):
                 bit = GPIO.input(PIN_RDATA[i])
                 val |= (bit << i)
-            return val
+        if self.step_delay > 0:
+            time.sleep(self.step_delay)
+        return val
 
 
 # ==============================================================================
@@ -296,9 +301,10 @@ def run_tests(tester):
     print(f"  -> Read back byte: 0x{read_val:02X}")
     assert read_val == test_byte, f"FAIL: Data mismatch! Expected 0x{test_byte:02X}, got 0x{read_val:02X}"
 
-    # Cycle read clock for synchronizer to reflect empty state
-    for _ in range(3):
+    # Cycle read clock for synchronizers to reflect empty state across CDC
+    for _ in range(4):
         tester.pulse_rclk()
+        tester.pulse_wclk()
     wfull, rempty = tester.read_flags()
     print(f"  -> Post-read flags: wfull={wfull}, rempty={rempty}")
     assert rempty == 1, "FAIL: FIFO should be EMPTY after reading last byte!"
@@ -315,14 +321,19 @@ def run_tests(tester):
         wfull, rempty = tester.read_flags()
         assert wfull == 0, f"FAIL: Premature wfull at byte {idx}!"
         tester.write_byte(byte_val)
+        wfull_now, rempty_now = tester.read_flags()
+        status_led = " [LED[0] FULL ON!]" if wfull_now else (" [LED[1] EMPTY OFF]" if not rempty_now else "")
+        print(f"    [{idx+1:2d}/16] Wrote 0x{byte_val:02X} -> Flags: empty={rempty_now}, full={wfull_now}{status_led}")
 
-    # Synchronizer settling cycles
-    for _ in range(3):
+    # Synchronizer settling cycles across CDC (must clock rclk so write pointer crosses into read domain)
+    for _ in range(4):
         tester.pulse_wclk()
+        tester.pulse_rclk()
 
     wfull, rempty = tester.read_flags()
     print(f"  -> Flags after 16 writes: wfull={wfull}, rempty={rempty}")
     assert wfull == 1, f"FAIL: FIFO must assert wfull after 16 writes! (wfull={wfull})"
+    assert rempty == 0, f"FAIL: FIFO should NOT be empty after 16 writes! (rempty={rempty})"
     print("  [PASS] Test 3 passed: FIFO successfully filled to depth 16.")
 
     # --------------------------------------------------------------------------
@@ -330,18 +341,24 @@ def run_tests(tester):
     # --------------------------------------------------------------------------
     print("\n[TEST 4] Overflow Protection (Attempt Write on Full)")
     tester.write_byte(0xFF)  # Attempt write to full FIFO
+    for _ in range(2):
+        tester.pulse_wclk()
+        tester.pulse_rclk()
     wfull, rempty = tester.read_flags()
     assert wfull == 1, "FAIL: FIFO dropped full flag after overflow attempt!"
+    assert rempty == 0, "FAIL: FIFO should NOT be empty while full!"
     print("  [PASS] Test 4 passed: Full flag remained asserted, pointer protected.")
 
     # --------------------------------------------------------------------------
     # TEST 5: Burst Read & Strict Data Integrity Check
     # --------------------------------------------------------------------------
-    print("\n[TEST 5] Burst Read & Data Integrity Verification")
+    print("\n[TEST 5] Burst Read & Data Integrity Verification (Watch LEDs[15:8] change!)")
     received = []
     for idx in range(16):
         data = tester.read_byte()
         received.append(data)
+        bin_str = f"{data:08b}"
+        print(f"    [{idx+1:2d}/16] Read 0x{data:02X} -> LEDs[15:8] display: {bin_str}")
 
     print(f"  -> Received sequence: {[hex(b) for b in received]}")
     assert received == test_pattern, f"FAIL: Data corrupted! Expected {test_pattern}, got {received}"
@@ -352,7 +369,7 @@ def run_tests(tester):
         tester.pulse_wclk()
 
     wfull, rempty = tester.read_flags()
-    print(f"  -> Flags after burst read: wfull={wfull}, rempty={rempty}")
+    print(f"  -> Flags after burst read: wfull={wfull}, rempty={rempty} [LED[1] EMPTY ON!]")
     assert rempty == 1, "FAIL: FIFO should be EMPTY after reading all 16 bytes!"
     assert wfull == 0, "FAIL: FIFO should NOT be FULL after reading!"
     print("  [PASS] Test 5 passed: All 16 bytes matched byte-for-byte in exact FIFO order!")
@@ -371,6 +388,7 @@ def run_tests(tester):
 def main():
     parser = argparse.ArgumentParser(description="Raspberry Pi Basys 3 FIFO Tester")
     parser.add_argument("--mock", action="store_true", help="Force mock simulation mode (no GPIO hardware)")
+    parser.add_argument("--delay", type=float, default=0.25, help="Step delay in seconds between byte operations to watch onboard LEDs in real-time (default: 0.25s)")
     args = parser.parse_args()
 
     use_mock = args.mock or (not HARDWARE_AVAILABLE)
@@ -378,7 +396,7 @@ def main():
     if not HARDWARE_AVAILABLE and not args.mock:
         print("[NOTICE] RPi.GPIO not detected on this system. Running automatically in --mock mode.\n")
 
-    tester = FIFOTester(mock=use_mock)
+    tester = FIFOTester(mock=use_mock, step_delay=args.delay)
     try:
         run_tests(tester)
     finally:

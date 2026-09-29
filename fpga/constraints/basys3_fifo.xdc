@@ -70,22 +70,27 @@ set_property -dict {PACKAGE_PIN U18 IOSTANDARD LVCMOS33} [get_ports btnC]
 ## =====================================================================
 ## 6. On-board 16 LEDs for Visual Debugging
 ## =====================================================================
-set_property -dict {PACKAGE_PIN U16 IOSTANDARD LVCMOS33} [get_ports {led[0]}];  # LD0
-set_property -dict {PACKAGE_PIN E19 IOSTANDARD LVCMOS33} [get_ports {led[1]}];  # LD1
-set_property -dict {PACKAGE_PIN U19 IOSTANDARD LVCMOS33} [get_ports {led[2]}];  # LD2
-set_property -dict {PACKAGE_PIN V19 IOSTANDARD LVCMOS33} [get_ports {led[3]}];  # LD3
-set_property -dict {PACKAGE_PIN W18 IOSTANDARD LVCMOS33} [get_ports {led[4]}];  # LD4
-set_property -dict {PACKAGE_PIN U15 IOSTANDARD LVCMOS33} [get_ports {led[5]}];  # LD5
-set_property -dict {PACKAGE_PIN U14 IOSTANDARD LVCMOS33} [get_ports {led[6]}];  # LD6
-set_property -dict {PACKAGE_PIN V14 IOSTANDARD LVCMOS33} [get_ports {led[7]}];  # LD7
-set_property -dict {PACKAGE_PIN V13 IOSTANDARD LVCMOS33} [get_ports {led[8]}];  # LD8
-set_property -dict {PACKAGE_PIN V3  IOSTANDARD LVCMOS33} [get_ports {led[9]}];  # LD9
-set_property -dict {PACKAGE_PIN W3  IOSTANDARD LVCMOS33} [get_ports {led[10]}]; # LD10
-set_property -dict {PACKAGE_PIN U3  IOSTANDARD LVCMOS33} [get_ports {led[11]}]; # LD11
-set_property -dict {PACKAGE_PIN P3  IOSTANDARD LVCMOS33} [get_ports {led[12]}]; # LD12
-set_property -dict {PACKAGE_PIN N3  IOSTANDARD LVCMOS33} [get_ports {led[13]}]; # LD13
-set_property -dict {PACKAGE_PIN P1  IOSTANDARD LVCMOS33} [get_ports {led[14]}]; # LD14
-set_property -dict {PACKAGE_PIN L1  IOSTANDARD LVCMOS33} [get_ports {led[15]}]; # LD15
+# FIFO Status Flags:
+set_property -dict {PACKAGE_PIN U16 IOSTANDARD LVCMOS33} [get_ports led_wfull];      # LD0  (FIFO Full - ON when 16 bytes full)
+set_property -dict {PACKAGE_PIN E19 IOSTANDARD LVCMOS33} [get_ports led_rempty];     # LD1  (FIFO Empty - ON when 0 bytes)
+
+# Unused LEDs (tied low):
+set_property -dict {PACKAGE_PIN U19 IOSTANDARD LVCMOS33} [get_ports {led_unused[0]}]; # LD2
+set_property -dict {PACKAGE_PIN V19 IOSTANDARD LVCMOS33} [get_ports {led_unused[1]}]; # LD3
+set_property -dict {PACKAGE_PIN W18 IOSTANDARD LVCMOS33} [get_ports {led_unused[2]}]; # LD4
+set_property -dict {PACKAGE_PIN U15 IOSTANDARD LVCMOS33} [get_ports {led_unused[3]}]; # LD5
+set_property -dict {PACKAGE_PIN U14 IOSTANDARD LVCMOS33} [get_ports {led_unused[4]}]; # LD6
+set_property -dict {PACKAGE_PIN V14 IOSTANDARD LVCMOS33} [get_ports {led_unused[5]}]; # LD7
+
+# 8-bit Read Data Bus (displays byte popping out of FIFO):
+set_property -dict {PACKAGE_PIN V13 IOSTANDARD LVCMOS33} [get_ports {led_rdata[0]}];  # LD8  (Read Data Bit 0 - LSB)
+set_property -dict {PACKAGE_PIN V3  IOSTANDARD LVCMOS33} [get_ports {led_rdata[1]}];  # LD9  (Read Data Bit 1)
+set_property -dict {PACKAGE_PIN W3  IOSTANDARD LVCMOS33} [get_ports {led_rdata[2]}];  # LD10 (Read Data Bit 2)
+set_property -dict {PACKAGE_PIN U3  IOSTANDARD LVCMOS33} [get_ports {led_rdata[3]}];  # LD11 (Read Data Bit 3)
+set_property -dict {PACKAGE_PIN P3  IOSTANDARD LVCMOS33} [get_ports {led_rdata[4]}];  # LD12 (Read Data Bit 4)
+set_property -dict {PACKAGE_PIN N3  IOSTANDARD LVCMOS33} [get_ports {led_rdata[5]}];  # LD13 (Read Data Bit 5)
+set_property -dict {PACKAGE_PIN P1  IOSTANDARD LVCMOS33} [get_ports {led_rdata[6]}];  # LD14 (Read Data Bit 6)
+set_property -dict {PACKAGE_PIN L1  IOSTANDARD LVCMOS33} [get_ports {led_rdata[7]}];  # LD15 (Read Data Bit 7 - MSB)
 
 ## =====================================================================
 ## 7. Configuration Voltage & SPI Flash Mode Settings

@@ -29,7 +29,10 @@ module basys3_fifo_top (
     input  wire       btnC,
 
     // On-board 16 LEDs for Visual Debugging
-    output wire [15:0] led
+    output wire       led_wfull,   // LD0: FIFO Full flag (Pin U16)
+    output wire       led_rempty,  // LD1: FIFO Empty flag (Pin E19)
+    output wire [5:0] led_unused,  // LD2..LD7: Unused / Low (Pins U19..V14)
+    output wire [7:0] led_rdata    // LD8..LD15: 8-bit Read Data bus (Pins V13..L1)
 );
 
     // Manual Reset from BTNC (inverted to active-low)
@@ -63,15 +66,15 @@ module basys3_fifo_top (
 
     // -------------------------------------------------------------
     // On-board LED Status Display:
-    // LED[0]     : FIFO Full flag (Lights up red/green when FULL)
-    // LED[1]     : FIFO Empty flag (Lights up when EMPTY)
-    // LED[7:2]   : Unused (driven low)
-    // LED[15:8]  : Shows the 8-bit Read Data byte directly on the board!
+    // led_wfull      : FIFO Full flag (Lights up when FULL)
+    // led_rempty     : FIFO Empty flag (Lights up when EMPTY)
+    // led_unused     : Unused LEDs LD2..LD7 (driven low)
+    // led_rdata[7:0] : Shows the 8-bit Read Data byte directly on LD15..LD8
     // -------------------------------------------------------------
-    assign led[0]    = jc_wfull;
-    assign led[1]    = jc_rempty;
-    assign led[7:2]  = 6'b000000;
-    assign led[15:8] = rdata_bus;
+    assign led_wfull  = jc_wfull;
+    assign led_rempty = jc_rempty;
+    assign led_unused = 6'b000000;
+    assign led_rdata  = rdata_bus;
 
     // Instantiate Tiny Tapeout Top Wrapper (tt_um_fifo)
     // This proves hardware execution of the exact ASIC top module!
