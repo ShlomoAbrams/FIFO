@@ -60,6 +60,7 @@ wdata[7]    | Output               | Yellow     | GPIO 2       | Pin 3          
 import sys
 import time
 import argparse
+import random
 
 # Check for Raspberry Pi hardware environment
 try:
@@ -199,9 +200,8 @@ class FIFOTester:
             rempty = GPIO.input(PIN_REMPTY)
             return wfull, rempty
 
-    def reset_fifo(self):
-        """Asserts asynchronous active-low resets, cycles clocks, and releases."""
-        print("  -> Asserting Reset (active-low)...")
+    def pulse_reset(self, hold_cycles=4):
+        """Pulls wrst_n and rrst_n low asynchronously, pulses clocks, and restores high."""
         if self.mock:
             self.sim.wrst_n = 0
             self.sim.rrst_n = 0
@@ -214,23 +214,31 @@ class FIFOTester:
             GPIO.output(PIN_RRST_N, GPIO.LOW)
             GPIO.output(PIN_WINC, GPIO.LOW)
             GPIO.output(PIN_RINC, GPIO.LOW)
-            for _ in range(4):
+            for _ in range(hold_cycles):
                 self.pulse_wclk()
                 self.pulse_rclk()
             GPIO.output(PIN_WRST_N, GPIO.HIGH)
             GPIO.output(PIN_RRST_N, GPIO.HIGH)
-            for _ in range(4):
+            for _ in range(hold_cycles):
                 self.pulse_wclk()
                 self.pulse_rclk()
 
+    def reset_fifo(self):
+        """Asserts asynchronous active-low resets, cycles clocks, and releases."""
+        print("  -> Asserting Reset (active-low)...")
+        self.pulse_reset(hold_cycles=4)
+
     def write_byte(self, value):
-        """Drives wdata bus, pulses winc, and generates a rising wclk edge."""
+        """Drives wdata bus, pulses winc, clocks wclk, and runs background rclk cycles for CDC."""
         val = value & 0xFF
         if self.mock:
             self.sim.wdata = val
             self.sim.winc = 1
             self.sim.tick_write()
             self.sim.winc = 0
+            # Background read clock cycles so CDC synchronizer propagates pointer
+            for _ in range(4):
+                self.sim.tick_read()
         else:
             for i in range(8):
                 bit = (val >> i) & 1
@@ -238,16 +246,22 @@ class FIFOTester:
             GPIO.output(PIN_WINC, GPIO.HIGH)
             self.pulse_wclk()
             GPIO.output(PIN_WINC, GPIO.LOW)
+            # Simulate free-running read clock in the background (4 cycles for 2-stage CDC sync)
+            for _ in range(4):
+                self.pulse_rclk()
         if self.step_delay > 0:
             time.sleep(self.step_delay)
 
     def read_byte(self):
-        """Pulses rinc, clocks rclk, and reads rdata bus."""
+        """Pulses rinc, clocks rclk, reads rdata bus, and runs background wclk cycles for CDC."""
         if self.mock:
             self.sim.rinc = 1
             self.sim.tick_read()
             self.sim.rinc = 0
             val = self.sim.rdata
+            # Background write clock cycles so CDC synchronizer propagates pointer
+            for _ in range(4):
+                self.sim.tick_write()
         else:
             GPIO.output(PIN_RINC, GPIO.HIGH)
             self.pulse_rclk()
@@ -257,6 +271,9 @@ class FIFOTester:
             for i in range(8):
                 bit = GPIO.input(PIN_RDATA[i])
                 val |= (bit << i)
+            # Simulate free-running write clock in the background (4 cycles for 2-stage CDC sync)
+            for _ in range(4):
+                self.pulse_wclk()
         if self.step_delay > 0:
             time.sleep(self.step_delay)
         return val
@@ -265,10 +282,13 @@ class FIFOTester:
 # ==============================================================================
 # Comprehensive Test Suite
 # ==============================================================================
-def run_tests(tester):
-    print("\n" + "=" * 60)
-    print("      ASYNCHRONOUS FIFO HARDWARE VALIDATION SUITE")
-    print("=" * 60)
+# ==============================================================================
+# Basic Sanity Test Suite (Tests 1 to 5)
+# ==============================================================================
+def run_basic_tests(tester):
+    print("\n" + "=" * 65)
+    print("      ASYNCHRONOUS FIFO BASIC HARDWARE SANITY SUITE")
+    print("=" * 65)
 
     # --------------------------------------------------------------------------
     # TEST 1: Reset and Initial State Check
@@ -285,13 +305,9 @@ def run_tests(tester):
     # TEST 2: Single Write and Single Read
     # --------------------------------------------------------------------------
     print("\n[TEST 2] Single Byte Write & Read Loopback")
-    test_byte = 0xA5  # 10100101
+    test_byte = 0xA5
     print(f"  -> Writing byte: 0x{test_byte:02X}")
     tester.write_byte(test_byte)
-
-    # Allow synchronizer 2 clock cycles to update rempty
-    for _ in range(3):
-        tester.pulse_rclk()
 
     wfull, rempty = tester.read_flags()
     print(f"  -> Post-write flags: wfull={wfull}, rempty={rempty}")
@@ -301,10 +317,6 @@ def run_tests(tester):
     print(f"  -> Read back byte: 0x{read_val:02X}")
     assert read_val == test_byte, f"FAIL: Data mismatch! Expected 0x{test_byte:02X}, got 0x{read_val:02X}"
 
-    # Cycle read clock for synchronizers to reflect empty state across CDC
-    for _ in range(4):
-        tester.pulse_rclk()
-        tester.pulse_wclk()
     wfull, rempty = tester.read_flags()
     print(f"  -> Post-read flags: wfull={wfull}, rempty={rempty}")
     assert rempty == 1, "FAIL: FIFO should be EMPTY after reading last byte!"
@@ -325,7 +337,7 @@ def run_tests(tester):
         status_led = " [LED[0] FULL ON!]" if wfull_now else (" [LED[1] EMPTY OFF]" if not rempty_now else "")
         print(f"    [{idx+1:2d}/16] Wrote 0x{byte_val:02X} -> Flags: empty={rempty_now}, full={wfull_now}{status_led}")
 
-    # Synchronizer settling cycles across CDC (must clock rclk so write pointer crosses into read domain)
+    # Synchronizer settling cycles across CDC
     for _ in range(4):
         tester.pulse_wclk()
         tester.pulse_rclk()
@@ -341,9 +353,6 @@ def run_tests(tester):
     # --------------------------------------------------------------------------
     print("\n[TEST 4] Overflow Protection (Attempt Write on Full)")
     tester.write_byte(0xFF)  # Attempt write to full FIFO
-    for _ in range(2):
-        tester.pulse_wclk()
-        tester.pulse_rclk()
     wfull, rempty = tester.read_flags()
     assert wfull == 1, "FAIL: FIFO dropped full flag after overflow attempt!"
     assert rempty == 0, "FAIL: FIFO should NOT be empty while full!"
@@ -358,15 +367,12 @@ def run_tests(tester):
         data = tester.read_byte()
         received.append(data)
         bin_str = f"{data:08b}"
-        print(f"    [{idx+1:2d}/16] Read 0x{data:02X} -> LEDs[15:8] display: {bin_str}")
+        wfull_now, rempty_now = tester.read_flags()
+        status_led = " [LED[1] EMPTY ON!]" if rempty_now else (" [LED[0] FULL OFF]" if not wfull_now and idx == 0 else "")
+        print(f"    [{idx+1:2d}/16] Read 0x{data:02X} -> LEDs[15:8]: {bin_str} | Flags: empty={rempty_now}, full={wfull_now}{status_led}")
 
     print(f"  -> Received sequence: {[hex(b) for b in received]}")
     assert received == test_pattern, f"FAIL: Data corrupted! Expected {test_pattern}, got {received}"
-
-    # Cycle read clock for empty flag update
-    for _ in range(4):
-        tester.pulse_rclk()
-        tester.pulse_wclk()
 
     wfull, rempty = tester.read_flags()
     print(f"  -> Flags after burst read: wfull={wfull}, rempty={rempty} [LED[1] EMPTY ON!]")
@@ -374,21 +380,159 @@ def run_tests(tester):
     assert wfull == 0, "FAIL: FIFO should NOT be FULL after reading!"
     print("  [PASS] Test 5 passed: All 16 bytes matched byte-for-byte in exact FIFO order!")
 
+
+# ==============================================================================
+# Advanced UVM-Equivalent Hardware Verification Suite (Phases 1 to 4)
+# ==============================================================================
+def run_uvm_suite(tester, num_transactions=40):
+    print("\n" + "=" * 65)
+    print("       ADVANCED UVM-EQUIVALENT HARDWARE VERIFICATION SUITE")
+    print("=" * 65)
+
     # --------------------------------------------------------------------------
-    # SUMMARY
+    # UVM PHASE 1: Concurrent Random Traffic & Real-Time Scoreboard
     # --------------------------------------------------------------------------
-    print("\n" + "=" * 60)
-    print("  ALL 5 HARDWARE VALIDATION TESTS PASSED SUCCESSFULLY! ")
-    print("=" * 60 + "\n")
+    print("\n[UVM PHASE 1] Concurrent Random Traffic & Real-Time Scoreboard (w_seq & r_seq)")
+    print(f"  -> Injecting {num_transactions} randomized read/write interleaved transactions...")
+    tester.reset_fifo()
+    scoreboard = []
+    writes_done = 0
+    reads_done = 0
+
+    for step in range(num_transactions):
+        wfull, rempty = tester.read_flags()
+
+        # Build valid action set based on hardware flag state
+        possible_actions = []
+        if not wfull:
+            possible_actions.append("write")
+        if not rempty and len(scoreboard) > 0:
+            possible_actions.append("read")
+        if not wfull and not rempty and len(scoreboard) > 0:
+            possible_actions.append("both")
+
+        action = random.choice(possible_actions) if possible_actions else "write"
+
+        if action in ("write", "both"):
+            byte_val = random.randint(0x00, 0xFF)
+            tester.write_byte(byte_val)
+            scoreboard.append(byte_val)
+            writes_done += 1
+            w_now, _ = tester.read_flags()
+            print(f"    [Step {step+1:3d}] WROTE 0x{byte_val:02X} | Scoreboard Depth: {len(scoreboard):2d} | Flags: full={w_now}")
+
+        if action in ("read", "both") and len(scoreboard) > 0:
+            read_val = tester.read_byte()
+            expected_val = scoreboard.pop(0)
+            reads_done += 1
+            _, r_now = tester.read_flags()
+            print(f"    [Step {step+1:3d}] READ  0x{read_val:02X} (Exp: 0x{expected_val:02X}) | Scoreboard Depth: {len(scoreboard):2d} | Flags: empty={r_now}")
+            assert read_val == expected_val, f"SCOREBOARD MISMATCH! Expected 0x{expected_val:02X}, got 0x{read_val:02X}"
+
+    # Drain any remaining bytes from Scoreboard
+    if scoreboard:
+        print(f"  -> Draining remaining {len(scoreboard)} bytes from Scoreboard...")
+        while scoreboard:
+            expected_val = scoreboard.pop(0)
+            read_val = tester.read_byte()
+            reads_done += 1
+            assert read_val == expected_val, f"DRAIN MISMATCH! Expected 0x{expected_val:02X}, got 0x{read_val:02X}"
+
+    wfull_end, rempty_end = tester.read_flags()
+    assert rempty_end == 1, "FAIL: FIFO should be empty after scoreboard drain!"
+    print(f"  [PASS] UVM Phase 1: Completed {writes_done} writes, {reads_done} reads with 100% Scoreboard match (0 drops, 0 mismatches)!")
+
+    # --------------------------------------------------------------------------
+    # UVM PHASE 2: Dynamic Burst Until Full (w_burst_seq)
+    # --------------------------------------------------------------------------
+    print("\n[UVM PHASE 2] Dynamic Burst Until Full (w_burst_seq)")
+    tester.reset_fifo()
+    burst_data = []
+    count = 0
+    max_limit = 25
+    while count < max_limit:
+        wfull, _ = tester.read_flags()
+        if wfull:
+            print(f"  -> Hardware 'wfull' asserted after exactly {count} bytes written!")
+            break
+        byte_val = (0x40 + count) & 0xFF
+        tester.write_byte(byte_val)
+        burst_data.append(byte_val)
+        count += 1
+
+    assert count == 16, f"FAIL: Expected FIFO to fill at depth 16, but took {count} bytes!"
+    wfull, rempty = tester.read_flags()
+    assert wfull == 1 and rempty == 0, f"FAIL: Invalid flags after fill (wfull={wfull}, rempty={rempty})"
+    print("  [PASS] UVM Phase 2: Burst fill stopped dynamically on hardware wfull at depth 16.")
+
+    # --------------------------------------------------------------------------
+    # UVM PHASE 3: Dynamic Drain Until Empty (r_drain_seq)
+    # --------------------------------------------------------------------------
+    print("\n[UVM PHASE 3] Dynamic Drain Until Empty (r_drain_seq)")
+    drained_data = []
+    drain_count = 0
+    while drain_count < max_limit:
+        _, rempty = tester.read_flags()
+        if rempty:
+            print(f"  -> Hardware 'rempty' asserted after exactly {drain_count} bytes read!")
+            break
+        val = tester.read_byte()
+        drained_data.append(val)
+        drain_count += 1
+
+    assert drain_count == 16, f"FAIL: Expected FIFO to drain in exactly 16 bytes, took {drain_count}!"
+    assert drained_data == burst_data, "FAIL: Data order mismatch during dynamic drain!"
+    wfull, rempty = tester.read_flags()
+    assert rempty == 1 and wfull == 0, f"FAIL: Invalid flags after drain (wfull={wfull}, rempty={rempty})"
+    print("  [PASS] UVM Phase 3: Drain completed with 100% data order and flag fidelity.")
+
+    # --------------------------------------------------------------------------
+    # UVM PHASE 4: Mid-Traffic Asynchronous Reset Recovery (fifo_reset_recovery_test)
+    # --------------------------------------------------------------------------
+    print("\n[UVM PHASE 4] Mid-Traffic Asynchronous Reset Recovery (fifo_reset_recovery_test)")
+    print("  -> Step 1: Pre-reset active traffic spree (writing 9 bytes into FIFO)...")
+    for i in range(9):
+        tester.write_byte(0x60 + i)
+
+    wfull_pre, rempty_pre = tester.read_flags()
+    print(f"  -> State before reset: wfull={wfull_pre}, rempty={rempty_pre} (FIFO contains 9 bytes)")
+    assert rempty_pre == 0, "FIFO should not be empty!"
+
+    print("  -> Step 2: Injecting asynchronous reset mid-traffic (wrst_n=0, rrst_n=0)...")
+    tester.pulse_reset(hold_cycles=5)
+
+    wfull_post, rempty_post = tester.read_flags()
+    print(f"  -> State after reset: wfull={wfull_post}, rempty={rempty_post} [LED[1] EMPTY ON!]")
+    assert rempty_post == 1, "FAIL: FIFO did not return to EMPTY after asynchronous reset!"
+    assert wfull_post == 0, "FAIL: FIFO reported full after reset!"
+
+    print("  -> Step 3: Post-reset recovery verification (verifying clean restart with zero lockup)...")
+    recovery_pattern = [0x80 + i for i in range(16)]
+    for b in recovery_pattern:
+        tester.write_byte(b)
+    wfull_rec, rempty_rec = tester.read_flags()
+    assert wfull_rec == 1 and rempty_rec == 0, "FAIL: FIFO failed to fill after reset recovery!"
+
+    recovered = [tester.read_byte() for _ in range(16)]
+    assert recovered == recovery_pattern, "FAIL: Post-reset data corrupted!"
+    wfull_end, rempty_end = tester.read_flags()
+    assert rempty_end == 1, "FAIL: FIFO did not return to empty after post-reset drain!"
+    print("  [PASS] UVM Phase 4: Asynchronous reset mid-traffic recovered flawlessly with zero lockup!")
+
+    print("\n" + "=" * 65)
+    print("  ALL 4 UVM-EQUIVALENT PHASES COMPLETED WITH 100% HARDWARE SUCCESS! ")
+    print("=" * 65 + "\n")
 
 
 # ==============================================================================
 # Main Entry Point
 # ==============================================================================
 def main():
-    parser = argparse.ArgumentParser(description="Raspberry Pi Basys 3 FIFO Tester")
+    parser = argparse.ArgumentParser(description="Raspberry Pi Basys 3 FIFO Tester & UVM Hardware Suite")
     parser.add_argument("--mock", action="store_true", help="Force mock simulation mode (no GPIO hardware)")
-    parser.add_argument("--delay", type=float, default=0.25, help="Step delay in seconds between byte operations to watch onboard LEDs in real-time (default: 0.25s)")
+    parser.add_argument("--mode", choices=["all", "basic", "uvm"], default="all", help="Test mode to run: 'basic', 'uvm', or 'all' (default: all)")
+    parser.add_argument("--transactions", type=int, default=40, help="Number of randomized transactions in UVM Phase 1 (default: 40)")
+    parser.add_argument("--delay", type=float, default=0.15, help="Step delay in seconds between byte operations to watch onboard LEDs in real-time (default: 0.15s)")
     args = parser.parse_args()
 
     use_mock = args.mock or (not HARDWARE_AVAILABLE)
@@ -398,7 +542,10 @@ def main():
 
     tester = FIFOTester(mock=use_mock, step_delay=args.delay)
     try:
-        run_tests(tester)
+        if args.mode in ("all", "basic"):
+            run_basic_tests(tester)
+        if args.mode in ("all", "uvm"):
+            run_uvm_suite(tester, num_transactions=args.transactions)
     finally:
         tester.cleanup()
 
